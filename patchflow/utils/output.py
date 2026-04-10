@@ -4,9 +4,12 @@ from patchflow.analysis.scope import ScopeAnalysisResult
 from patchflow.cleaning.branch_builder import CleanBranchSummary, default_clean_branch_name
 from patchflow.github.pr_status import PRStatusResult
 
+JSON_SCHEMA_VERSION = "1"
+
 
 def analysis_to_dict(result: ScopeAnalysisResult) -> dict[str, object]:
     return {
+        "schema_version": JSON_SCHEMA_VERSION,
         "branch": {
             "current": result.branch.current_branch,
             "base": result.branch.base_branch,
@@ -165,6 +168,7 @@ def clean_preview_to_dict(
     ]
 
     return {
+        "schema_version": JSON_SCHEMA_VERSION,
         "branch_name": clean_branch_name,
         "selected_cluster_index": selected_cluster,
         "selected_commits": selected_commit_payload,
@@ -219,6 +223,7 @@ def render_status(result: PRStatusResult) -> str:
 
 def status_to_dict(result: PRStatusResult) -> dict[str, object]:
     return {
+        "schema_version": JSON_SCHEMA_VERSION,
         "status": result.status,
         "checks": result.checks,
         "reviews": result.reviews,
@@ -234,6 +239,7 @@ def render_status_json(result: PRStatusResult) -> str:
 
 def clean_summary_to_dict(summary: CleanBranchSummary) -> dict[str, object]:
     return {
+        "schema_version": JSON_SCHEMA_VERSION,
         "success": True,
         "branch_name": summary.branch_name,
         "original_branch": summary.original_branch,
@@ -250,6 +256,7 @@ def render_clean_summary_json(summary: CleanBranchSummary) -> str:
 
 def clean_error_to_dict(message: str, *, code: str) -> dict[str, object]:
     return {
+        "schema_version": JSON_SCHEMA_VERSION,
         "success": False,
         "error": {
             "code": code,

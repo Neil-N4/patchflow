@@ -8,6 +8,7 @@ import subprocess
 import sys
 
 from patchflow.git.repo import BranchContext, get_branch_context
+from patchflow.utils.output import JSON_SCHEMA_VERSION
 
 
 @dataclass
@@ -155,6 +156,7 @@ def run_doctor() -> DoctorResult:
 
 def doctor_to_dict(result: DoctorResult) -> dict[str, object]:
     return {
+        "schema_version": JSON_SCHEMA_VERSION,
         "overall_status": result.overall_status,
         "patchflow_version": result.patchflow_version,
         "python_version": result.python_version,

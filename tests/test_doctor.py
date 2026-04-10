@@ -16,6 +16,7 @@ class DoctorCommandTests(unittest.TestCase):
             text=True,
         )
         payload = json.loads(completed.stdout)
+        self.assertEqual(payload["schema_version"], "1")
         self.assertIn(payload["overall_status"], {"OK", "WARN", "FAIL"})
         self.assertIn("patchflow_version", payload)
         self.assertIn("python_version", payload)
@@ -36,6 +37,7 @@ class DoctorCommandTests(unittest.TestCase):
                 env=env,
             )
         payload = json.loads(completed.stdout)
+        self.assertEqual(payload["schema_version"], "1")
         self.assertEqual(payload["branch"], None)
         self.assertIn(payload["overall_status"], {"WARN", "FAIL"})
         workspace_checks = [check for check in payload["checks"] if check["name"] == "workspace"]

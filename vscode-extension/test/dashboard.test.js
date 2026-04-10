@@ -9,6 +9,7 @@ test("renderDashboardHtml escapes user-provided values and marks the selected cl
     cleanBranchName: "patchflow/clean-demo",
     switchToClean: true,
     analyze: {
+      schema_version: "1",
       branch: {
         current: "feature/demo",
         base: "main",
@@ -43,6 +44,7 @@ test("renderDashboardHtml escapes user-provided values and marks the selected cl
       ],
     },
     preview: {
+      schema_version: "1",
       branch_name: "patchflow/clean-demo",
       selected_cluster_index: 2,
       selected_commits: [{ sha: "abc123", message: "feat: add <thing>", files: ["src/app.ts"] }],
@@ -52,6 +54,7 @@ test("renderDashboardHtml escapes user-provided values and marks the selected cl
       safe: true,
     },
     status: {
+      schema_version: "1",
       status: "BLOCKED",
       checks: ["CI waiting"],
       reviews: ["Code owner review required"],
@@ -60,6 +63,7 @@ test("renderDashboardHtml escapes user-provided values and marks the selected cl
       recommendation: "wait",
     },
     doctor: {
+      schema_version: "1",
       overall_status: "WARN",
       patchflow_version: "0.1.0",
       python_version: "3.13.0",
@@ -91,6 +95,7 @@ test("renderDashboardHtml escapes user-provided values and marks the selected cl
 test("renderDashboardHtml shows clean success messages", () => {
   const html = renderDashboardHtml({
     cleanResult: {
+      schema_version: "1",
       success: true,
       branch_name: "patchflow/clean-fix",
       original_branch: "feature/fix",

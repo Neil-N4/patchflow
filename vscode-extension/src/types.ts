@@ -14,6 +14,7 @@ export type AnalyzeCluster = {
 };
 
 export type AnalyzeResult = {
+  schema_version: string;
   branch: {
     current: string;
     base: string;
@@ -32,6 +33,7 @@ export type AnalyzeResult = {
 };
 
 export type StatusResult = {
+  schema_version: string;
   status: string;
   checks: string[];
   reviews: string[];
@@ -47,6 +49,7 @@ export type DoctorCheck = {
 };
 
 export type DoctorResult = {
+  schema_version: string;
   overall_status: string;
   patchflow_version: string;
   python_version: string;
@@ -67,6 +70,7 @@ export type CleanPreviewCommit = {
 };
 
 export type CleanPreviewResult = {
+  schema_version: string;
   branch_name: string;
   selected_cluster_index: number | null;
   selected_commits: CleanPreviewCommit[];
@@ -77,6 +81,7 @@ export type CleanPreviewResult = {
 };
 
 export type CleanSuccessResult = {
+  schema_version: string;
   success: true;
   branch_name: string;
   original_branch: string;
@@ -87,6 +92,7 @@ export type CleanSuccessResult = {
 };
 
 export type CleanErrorResult = {
+  schema_version: string;
   success: false;
   error: {
     code: string;

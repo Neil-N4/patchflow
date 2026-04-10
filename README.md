@@ -161,7 +161,11 @@ settings to point at the executable you want it to run.
 
 ## Structured Output
 
-`analyze`, `clean`, and `status` all support `--json` for machine-readable output.
+`analyze`, `clean`, `status`, and `doctor` all support `--json` for
+machine-readable output.
+
+Each JSON payload includes `schema_version` so editor integrations and future UI
+layers can track contract changes explicitly.
 
 This is the current integration surface for editor tooling, scripts, and future
 UI layers.

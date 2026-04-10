@@ -43,6 +43,7 @@ class JsonOutputTests(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
         payload = json.loads(result.output)
+        self.assertEqual(payload["schema_version"], "1")
         self.assertEqual(payload["branch"]["current"], "feature/json")
         self.assertEqual(payload["branch"]["base"], "main")
         self.assertEqual(payload["status"], "CLEAN")
@@ -68,6 +69,7 @@ class JsonOutputTests(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
         payload = json.loads(result.output)
+        self.assertEqual(payload["schema_version"], "1")
         self.assertEqual(payload["status"], "WAITING")
         self.assertEqual(payload["recommendation"], "wait")
         self.assertEqual(payload["checks"], ["combined status: pending"])
@@ -90,6 +92,7 @@ class JsonOutputTests(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
         payload = json.loads(result.output)
+        self.assertEqual(payload["schema_version"], "1")
         self.assertEqual(payload["branch_name"], "patchflow/clean-feature-json-clean")
         self.assertEqual(payload["selected_cluster_index"], 1)
         self.assertEqual(len(payload["selected_commits"]), 1)
@@ -116,6 +119,7 @@ class JsonOutputTests(unittest.TestCase):
 
         self.assertEqual(result.exit_code, 0, msg=result.output)
         payload = json.loads(result.output)
+        self.assertEqual(payload["schema_version"], "1")
         self.assertTrue(payload["success"])
         self.assertEqual(payload["branch_name"], "patchflow/clean-feature-json-clean-success")
         self.assertEqual(payload["original_branch"], "feature/json-clean-success")
@@ -140,6 +144,7 @@ class JsonOutputTests(unittest.TestCase):
 
         self.assertNotEqual(result.exit_code, 0)
         payload = json.loads(result.output.split("Error: ", maxsplit=1)[1])
+        self.assertEqual(payload["schema_version"], "1")
         self.assertFalse(payload["success"])
         self.assertEqual(payload["error"]["code"], "low_confidence")
 
@@ -156,6 +161,7 @@ class JsonOutputTests(unittest.TestCase):
 
         self.assertNotEqual(result.exit_code, 0)
         payload = json.loads(result.output.split("Error: ", maxsplit=1)[1])
+        self.assertEqual(payload["schema_version"], "1")
         self.assertFalse(payload["success"])
         self.assertEqual(payload["error"]["code"], "uncommitted_only")
 
