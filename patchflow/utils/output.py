@@ -1,7 +1,7 @@
 import json
 
 from patchflow.analysis.scope import ScopeAnalysisResult
-from patchflow.cleaning.branch_builder import default_clean_branch_name
+from patchflow.cleaning.branch_builder import CleanBranchSummary, default_clean_branch_name
 from patchflow.github.pr_status import PRStatusResult
 
 
@@ -130,6 +130,58 @@ def render_clean_preview(
     )
 
 
+def clean_preview_to_dict(
+    result: ScopeAnalysisResult,
+    branch_name: str | None,
+) -> dict[str, object]:
+    selected_commits = result.selected_cluster.commits if result.selected_cluster else []
+    selected_files = result.selected_cluster.files if result.selected_cluster else []
+    clean_branch_name = branch_name or default_clean_branch_name(result.branch.current_branch)
+    selected_cluster = (
+        result.selected_cluster_index + 1
+        if result.selected_cluster_index is not None
+        else None
+    )
+
+    excluded_commits = [
+        {
+            "sha": commit.sha,
+            "message": commit.message,
+            "files": commit.files,
+        }
+        for index, cluster in enumerate(result.clusters)
+        if index != result.selected_cluster_index
+        for commit in cluster.commits
+        if commit.sha != "WORKTREE"
+    ]
+
+    selected_commit_payload = [
+        {
+            "sha": commit.sha,
+            "message": commit.message,
+            "files": commit.files,
+        }
+        for commit in selected_commits
+    ]
+
+    return {
+        "branch_name": clean_branch_name,
+        "selected_cluster_index": selected_cluster,
+        "selected_commits": selected_commit_payload,
+        "excluded_commits": excluded_commits,
+        "selected_files": selected_files,
+        "excluded_files": result.other_files,
+        "safe": True,
+    }
+
+
+def render_clean_preview_json(
+    result: ScopeAnalysisResult,
+    branch_name: str | None,
+) -> str:
+    return json.dumps(clean_preview_to_dict(result, branch_name), indent=2, sort_keys=True)
+
+
 def _render_clusters(result: ScopeAnalysisResult) -> str:
     if not result.clusters:
         return "- none"
@@ -178,3 +230,32 @@ def status_to_dict(result: PRStatusResult) -> dict[str, object]:
 
 def render_status_json(result: PRStatusResult) -> str:
     return json.dumps(status_to_dict(result), indent=2, sort_keys=True)
+
+
+def clean_summary_to_dict(summary: CleanBranchSummary) -> dict[str, object]:
+    return {
+        "success": True,
+        "branch_name": summary.branch_name,
+        "original_branch": summary.original_branch,
+        "included_commits": summary.included_commits,
+        "included_files": summary.included_files,
+        "safe": True,
+    }
+
+
+def render_clean_summary_json(summary: CleanBranchSummary) -> str:
+    return json.dumps(clean_summary_to_dict(summary), indent=2, sort_keys=True)
+
+
+def clean_error_to_dict(message: str, *, code: str) -> dict[str, object]:
+    return {
+        "success": False,
+        "error": {
+            "code": code,
+            "message": message,
+        },
+    }
+
+
+def render_clean_error_json(message: str, *, code: str) -> str:
+    return json.dumps(clean_error_to_dict(message, code=code), indent=2, sort_keys=True)

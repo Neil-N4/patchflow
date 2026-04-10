@@ -7,6 +7,7 @@ from patchflow.analysis.scope import ScopeAnalysisResult
 @dataclass
 class CleanBranchSummary:
     branch_name: str
+    original_branch: str
     included_commits: int
     included_files: int
 
@@ -95,6 +96,7 @@ def create_clean_branch(
     _run_git("switch", original_branch)
     return CleanBranchSummary(
         branch_name=clean_branch_name,
+        original_branch=original_branch,
         included_commits=len(commit_shas),
         included_files=len(result.selected_cluster.files),
     )

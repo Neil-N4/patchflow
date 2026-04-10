@@ -79,6 +79,7 @@ Clusters:
 ```bash
 patchflow clean --dry-run
 patchflow clean --cluster 2 --branch-name patchflow/clean-feature --yes
+patchflow clean --dry-run --json
 ```
 
 Safety rules:
@@ -101,7 +102,7 @@ branch on the `origin` GitHub remote.
 
 ## Structured Output
 
-`analyze` and `status` both support `--json` for machine-readable output.
+`analyze`, `clean`, and `status` all support `--json` for machine-readable output.
 
 This is the current integration surface for editor tooling, scripts, and future
 UI layers.
