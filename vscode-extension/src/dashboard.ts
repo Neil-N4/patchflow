@@ -3,6 +3,7 @@ import type {
   CleanErrorResult,
   CleanPreviewResult,
   CleanSuccessResult,
+  DoctorResult,
   StatusResult,
 } from "./types";
 
@@ -10,10 +11,12 @@ export type DashboardPayload = {
   analyze?: AnalyzeResult;
   preview?: CleanPreviewResult;
   status?: StatusResult;
+  doctor?: DoctorResult;
   cleanResult?: CleanSuccessResult | CleanErrorResult;
   analyzeError?: string;
   previewError?: string;
   statusError?: string;
+  doctorError?: string;
   prRef?: string;
   cleanBranchName?: string;
 };
@@ -38,6 +41,7 @@ export function renderDashboardHtml(payload: DashboardPayload): string {
   const analyzeResult = payload.analyze;
   const preview = payload.preview;
   const statusResult = payload.status;
+  const doctorResult = payload.doctor;
   const cleanResult = payload.cleanResult;
   const clusterOptions = analyzeResult?.clusters
     .map((cluster) => {
@@ -155,6 +159,23 @@ export function renderDashboardHtml(payload: DashboardPayload): string {
                 <ul>${renderList(preview.excluded_files)}</ul>
               `
               : `<p>${escapeHtml(payload.previewError ?? "Run a clean preview to see selected and excluded changes.")}</p>`
+          }
+        </section>
+        <section class="panel">
+          <h2>Doctor</h2>
+          ${
+            doctorResult
+              ? `
+                <p><strong>Overall:</strong> ${escapeHtml(doctorResult.overall_status)}</p>
+                <p><strong>Patchflow:</strong> ${escapeHtml(doctorResult.patchflow_version)} | <strong>Python:</strong> ${escapeHtml(doctorResult.python_version)}</p>
+                <h3>Checks</h3>
+                <ul>${renderList(
+                  doctorResult.checks.map(
+                    (check) => `[${check.status}] ${check.name}: ${check.summary}`,
+                  ),
+                )}</ul>
+              `
+              : `<p>${escapeHtml(payload.doctorError ?? "No environment diagnostics available.")}</p>`
           }
         </section>
       </div>

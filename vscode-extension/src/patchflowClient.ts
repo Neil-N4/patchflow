@@ -6,12 +6,14 @@ import type {
   CleanErrorResult,
   CleanPreviewResult,
   CleanSuccessResult,
+  DoctorResult,
   StatusResult,
 } from "./types";
 import { formatPatchflowInvocationError } from "./clientErrors";
 import {
   buildAnalyzeArgs,
   buildCleanArgs,
+  buildDoctorArgs,
   buildStatusArgs,
   parseCleanError,
 } from "./commandArgs";
@@ -51,6 +53,11 @@ export async function analyze(clusterIndex?: number): Promise<AnalyzeResult> {
 export async function status(prRef?: string): Promise<StatusResult> {
   const { stdout } = await runPatchflowJson(buildStatusArgs(prRef));
   return JSON.parse(stdout) as StatusResult;
+}
+
+export async function doctor(): Promise<DoctorResult> {
+  const { stdout } = await runPatchflowJson(buildDoctorArgs());
+  return JSON.parse(stdout) as DoctorResult;
 }
 
 export async function cleanPreview(

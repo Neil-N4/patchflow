@@ -40,6 +40,26 @@ export type StatusResult = {
   recommendation: string;
 };
 
+export type DoctorCheck = {
+  name: string;
+  status: string;
+  summary: string;
+};
+
+export type DoctorResult = {
+  overall_status: string;
+  patchflow_version: string;
+  python_version: string;
+  checks: DoctorCheck[];
+  branch: {
+    current: string;
+    base: string;
+    ahead_by: number;
+    behind_by: number;
+    has_uncommitted_changes: boolean;
+  } | null;
+};
+
 export type CleanPreviewCommit = {
   sha: string;
   message: string;

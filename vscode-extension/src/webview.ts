@@ -1,10 +1,11 @@
 import * as vscode from "vscode";
-import { analyze, clean, cleanPreview, status } from "./patchflowClient";
+import { analyze, clean, cleanPreview, doctor, status } from "./patchflowClient";
 import type {
   AnalyzeResult,
   CleanErrorResult,
   CleanPreviewResult,
   CleanSuccessResult,
+  DoctorResult,
   StatusResult,
 } from "./types";
 import { renderDashboardHtml } from "./dashboard";
@@ -14,10 +15,12 @@ export class PatchflowPanel {
   private analyzeResult: AnalyzeResult | undefined;
   private previewResult: CleanPreviewResult | undefined;
   private statusResult: StatusResult | undefined;
+  private doctorResult: DoctorResult | undefined;
   private cleanResult: CleanSuccessResult | CleanErrorResult | undefined;
   private analyzeError: string | undefined;
   private previewError: string | undefined;
   private statusError: string | undefined;
+  private doctorError: string | undefined;
   private selectedCluster: number | undefined;
   private prRef: string | undefined;
   private cleanBranchName: string | undefined;
@@ -77,6 +80,7 @@ export class PatchflowPanel {
   private async refresh(): Promise<void> {
     const analyzeTask = analyze(this.selectedCluster);
     const statusTask = status(this.prRef);
+    const doctorTask = doctor();
 
     try {
       this.analyzeResult = await analyzeTask;
@@ -94,6 +98,14 @@ export class PatchflowPanel {
     } catch (error) {
       this.statusResult = undefined;
       this.statusError = error instanceof Error ? error.message : String(error);
+    }
+
+    try {
+      this.doctorResult = await doctorTask;
+      this.doctorError = undefined;
+    } catch (error) {
+      this.doctorResult = undefined;
+      this.doctorError = error instanceof Error ? error.message : String(error);
     }
 
     if (this.analyzeResult) {
@@ -141,10 +153,12 @@ export class PatchflowPanel {
       analyze: this.analyzeResult,
       preview: this.previewResult,
       status: this.statusResult,
+      doctor: this.doctorResult,
       cleanResult: this.cleanResult,
       analyzeError: this.analyzeError,
       previewError: this.previewError,
       statusError: this.statusError,
+      doctorError: this.doctorError,
       prRef: this.prRef,
       cleanBranchName: this.cleanBranchName,
     });

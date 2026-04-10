@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const {
   buildAnalyzeArgs,
   buildStatusArgs,
+  buildDoctorArgs,
   buildCleanArgs,
   parseCleanError,
 } = require("../dist/commandArgs.js");
@@ -16,6 +17,10 @@ test("buildAnalyzeArgs includes optional cluster", () => {
 test("buildStatusArgs includes optional pr ref", () => {
   assert.deepEqual(buildStatusArgs(), ["status", "--json"]);
   assert.deepEqual(buildStatusArgs("22894"), ["status", "--json", "--pr", "22894"]);
+});
+
+test("buildDoctorArgs is fixed and JSON-based", () => {
+  assert.deepEqual(buildDoctorArgs(), ["doctor", "--json"]);
 });
 
 test("buildCleanArgs handles dry-run and branch overrides", () => {

@@ -14,6 +14,10 @@ export function buildStatusArgs(prRef?: string): string[] {
   return args;
 }
 
+export function buildDoctorArgs(): string[] {
+  return ["doctor", "--json"];
+}
+
 export function buildCleanArgs(options?: {
   clusterIndex?: number;
   branchName?: string;

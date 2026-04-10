@@ -58,6 +58,22 @@ test("renderDashboardHtml escapes user-provided values and marks the selected cl
       conflicts: [],
       recommendation: "wait",
     },
+    doctor: {
+      overall_status: "WARN",
+      patchflow_version: "0.1.0",
+      python_version: "3.13.0",
+      branch: {
+        current: "feature/demo",
+        base: "main",
+        ahead_by: 2,
+        behind_by: 1,
+        has_uncommitted_changes: false,
+      },
+      checks: [
+        { name: "git", status: "OK", summary: "git version 2.x" },
+        { name: "github_auth", status: "WARN", summary: "No token detected" },
+      ],
+    },
   });
 
   assert.match(html, /value="2" selected/);
@@ -66,6 +82,7 @@ test("renderDashboardHtml escapes user-provided values and marks the selected cl
   assert.ok(html.includes('42&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;'));
   assert.ok(!html.includes("<script>alert(1)</script>"));
   assert.ok(html.includes("Created patchflow/clean-demo from 1 commits.") === false);
+  assert.ok(html.includes("[WARN] github_auth: No token detected"));
 });
 
 test("renderDashboardHtml shows clean success messages", () => {
