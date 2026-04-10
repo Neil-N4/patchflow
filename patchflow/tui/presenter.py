@@ -29,10 +29,17 @@ def cluster_label(result: ScopeAnalysisResult, index: int) -> str:
     )
 
 
-def detail_text(result: ScopeAnalysisResult, branch_name: str | None) -> str:
+def detail_text(
+    result: ScopeAnalysisResult,
+    branch_name: str | None,
+    *,
+    switch_to_clean: bool = False,
+) -> str:
     clean_branch_name = branch_name or default_clean_branch_name(result.branch.current_branch)
+    switch_note = "on" if switch_to_clean else "off"
     return (
         f"Planned clean branch: {clean_branch_name}\n\n"
+        f"Switch after clean: {switch_note}\n\n"
         f"{render_clean_preview(result, branch_name)}"
     )
 

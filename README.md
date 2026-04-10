@@ -140,6 +140,7 @@ The current TUI supports:
 - branch summary
 - cluster list with selection
 - clean preview pane
+- switch-to-clean toggle
 - PR status pane
 - refresh
 - PR status refresh

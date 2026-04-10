@@ -59,6 +59,11 @@ class TuiPresenterTests(unittest.TestCase):
         text = detail_text(result, None)
         self.assertIn(default_clean_branch_name(result.branch.current_branch), text)
         self.assertIn("Selected commits:", text)
+        self.assertIn("Switch after clean: off", text)
+
+    def test_detail_text_marks_switch_mode(self) -> None:
+        text = detail_text(_result(), None, switch_to_clean=True)
+        self.assertIn("Switch after clean: on", text)
 
     def test_pr_status_text_renders_sections(self) -> None:
         text = pr_status_text(

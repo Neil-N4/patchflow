@@ -65,6 +65,7 @@ class PatchflowApp(App[None]):
         ("r", "refresh", "Refresh"),
         ("c", "clean", "Clean"),
         ("p", "refresh_pr_status", "Refresh PR"),
+        ("s", "toggle_switch", "Toggle Switch"),
     ]
 
     def __init__(self, branch_name: str | None = None) -> None:
@@ -74,6 +75,7 @@ class PatchflowApp(App[None]):
         self.selected_cluster_index: int | None = None
         self.pr_status: PRStatusResult | None = None
         self.pr_status_error: str | None = None
+        self.switch_to_clean = False
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -88,6 +90,7 @@ class PatchflowApp(App[None]):
         with Horizontal(id="actions"):
             yield Button("Refresh", id="refresh")
             yield Button("Refresh PR", id="pr-refresh")
+            yield Button("Switch: Off", id="switch-toggle")
             yield Button("Clean", id="clean")
             yield Button("Quit", id="quit")
         yield Footer()
@@ -104,7 +107,13 @@ class PatchflowApp(App[None]):
     def _render(self) -> None:
         assert self.result is not None
         self.query_one("#summary", Static).update(branch_summary_text(self.result))
-        self.query_one("#details", Static).update(detail_text(self.result, self.branch_name))
+        self.query_one("#details", Static).update(
+            detail_text(
+                self.result,
+                self.branch_name,
+                switch_to_clean=self.switch_to_clean,
+            )
+        )
         self.query_one("#pr-status", Static).update(
             pr_status_text(self.pr_status, self.pr_status_error)
         )
@@ -134,6 +143,9 @@ class PatchflowApp(App[None]):
         if event.button.id == "clean":
             self.action_clean()
             return
+        if event.button.id == "switch-toggle":
+            self.action_toggle_switch()
+            return
         if event.button.id == "pr-refresh":
             self.action_refresh_pr_status()
             return
@@ -160,20 +172,46 @@ class PatchflowApp(App[None]):
         self.refresh_pr_status()
         self._set_status("PR status refreshed.")
 
+    def action_toggle_switch(self) -> None:
+        self.switch_to_clean = not self.switch_to_clean
+        self.query_one("#switch-toggle", Button).label = (
+            "Switch: On" if self.switch_to_clean else "Switch: Off"
+        )
+        if self.result is not None:
+            self.query_one("#details", Static).update(
+                detail_text(
+                    self.result,
+                    self.branch_name,
+                    switch_to_clean=self.switch_to_clean,
+                )
+            )
+        self._set_status(
+            "Clean will switch to the new branch."
+            if self.switch_to_clean
+            else "Clean will leave you on the original branch."
+        )
+
     def action_clean(self) -> None:
         if self.result is None or self.result.selected_cluster is None:
             self._set_status("No selected cluster available.")
             return
         try:
-            summary = create_clean_branch(self.result, branch_name=self.branch_name)
+            summary = create_clean_branch(
+                self.result,
+                branch_name=self.branch_name,
+                switch=self.switch_to_clean,
+            )
         except CleanBranchError as exc:
             self._set_status(f"Clean failed: {exc}")
             return
         self._set_status(
-            f"Created {summary.branch_name} from {summary.included_commits} commits / {summary.included_files} files."
+            f"Created {summary.branch_name} from {summary.included_commits} commits / {summary.included_files} files. Current branch: {summary.current_branch}."
         )
         self.refresh_analysis(cluster_index=self.selected_cluster_index + 1 if self.selected_cluster_index is not None else None)
         self.refresh_pr_status()
+
+    def action_toggle_switch_binding(self) -> None:
+        self.action_toggle_switch()
 
 
 def run_tui(branch_name: str | None = None) -> None:
