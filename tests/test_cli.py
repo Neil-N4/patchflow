@@ -161,6 +161,55 @@ class PatchflowCliTests(unittest.TestCase):
         self.assertIn("app.txt", clean_diff)
         self.assertNotIn("notes.md", clean_diff)
 
+    def test_analyze_prefers_stacked_feature_commits_over_single_noise_commit(self) -> None:
+        repo = self.make_repo()
+        (repo / "src").mkdir()
+        (repo / "src" / "app.py").write_text("print('base')\n")
+        git(repo, "add", "src/app.py")
+        git(repo, "commit", "-m", "base commit")
+        git(repo, "switch", "-c", "feature/stacked")
+
+        (repo / "src" / "app.py").write_text("print('base')\nprint('step1')\n")
+        git(repo, "add", "src/app.py")
+        git(repo, "commit", "-m", "feat: add first app step")
+
+        (repo / "src" / "utils.py").write_text("def helper():\n    return 'ok'\n")
+        git(repo, "add", "src/utils.py")
+        git(repo, "commit", "-m", "feat: add helper for app")
+
+        (repo / "README.md").write_text("temporary notes\n")
+        git(repo, "add", "README.md")
+        git(repo, "commit", "-m", "docs: temporary readme note")
+
+        result = run(["python3", "-m", "patchflow.cli", "analyze"], repo)
+
+        self.assertIn("Confidence: HIGH", result.stdout)
+        self.assertIn("feat: add first app step", result.stdout)
+        self.assertIn("feat: add helper for app", result.stdout)
+        self.assertIn("README.md", result.stdout)
+        self.assertIn("Other changes:\n- README.md", result.stdout)
+
+    def test_analyze_keeps_uncommitted_changes_out_of_primary_when_branch_commits_exist(self) -> None:
+        repo = self.make_repo()
+        (repo / "src").mkdir()
+        (repo / "src" / "app.py").write_text("print('base')\n")
+        git(repo, "add", "src/app.py")
+        git(repo, "commit", "-m", "base commit")
+        git(repo, "switch", "-c", "feature/mixed")
+
+        (repo / "src" / "app.py").write_text("print('base')\nprint('feature')\n")
+        git(repo, "add", "src/app.py")
+        git(repo, "commit", "-m", "feat: update app")
+
+        (repo / "scratch.txt").write_text("debug scratch\n")
+
+        result = run(["python3", "-m", "patchflow.cli", "analyze"], repo)
+
+        self.assertIn("Confidence: HIGH", result.stdout)
+        self.assertIn("feat: update app", result.stdout)
+        self.assertIn("Other changes:\n- scratch.txt", result.stdout)
+        self.assertNotIn("commit: uncommitted changes\n  file: scratch.txt", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -15,6 +15,7 @@ class ScopeAnalysisResult:
     selected_cluster: CommitCluster | None
     selected_cluster_index: int | None
     changed_files: list[str]
+    worktree_files: list[str]
     other_files: list[str]
     recommendations: list[str]
 
@@ -43,22 +44,26 @@ def analyze_branch_scope(cluster_index: int | None = None) -> ScopeAnalysisResul
         current_branch=branch.current_branch,
     )
     worktree_files = list_worktree_files()
-    if worktree_files:
-        commits.append(
-            CommitRecord(
-                sha="WORKTREE",
-                message="uncommitted changes",
-                files=worktree_files,
-            )
+
+    clusters = cluster_commits(commits)
+    if not clusters and worktree_files:
+        clusters = cluster_commits(
+            [
+                CommitRecord(
+                    sha="WORKTREE",
+                    message="uncommitted changes",
+                    files=worktree_files,
+                )
+            ]
         )
 
     changed_files = list_changed_files()
-    clusters = cluster_commits(commits)
     selected_cluster_index, selected_cluster = _resolve_selected_cluster(
         clusters,
         cluster_index,
     )
     selected_files = set(selected_cluster.files if selected_cluster else [])
+    selected_files.update(worktree_files if selected_cluster and any(commit.sha == "WORKTREE" for commit in selected_cluster.commits) else [])
     other_files = [path for path in changed_files if path not in selected_files]
 
     recommendations: list[str] = []
@@ -80,6 +85,7 @@ def analyze_branch_scope(cluster_index: int | None = None) -> ScopeAnalysisResul
         selected_cluster=selected_cluster,
         selected_cluster_index=selected_cluster_index,
         changed_files=changed_files,
+        worktree_files=worktree_files,
         other_files=other_files,
         recommendations=recommendations,
     )

@@ -33,6 +33,13 @@ def _related_to_cluster(commit: CommitRecord, cluster: CommitCluster) -> bool:
 
 
 def _clusters_are_ambiguous(primary: CommitCluster, secondary: CommitCluster) -> bool:
+    secondary_has_worktree = any(commit.sha == "WORKTREE" for commit in secondary.commits)
+    if secondary_has_worktree and not any(commit.sha == "WORKTREE" for commit in primary.commits):
+        return False
+
+    if len(primary.commits) >= 2 and len(primary.commits) > len(secondary.commits):
+        return False
+
     if len(primary.commits) == 1 and len(secondary.commits) == 1:
         return True
 
@@ -63,12 +70,16 @@ def _cluster_score(
     common_tokens = set.intersection(*token_sets) if token_sets else set()
     message_similarity = len(common_tokens) / max(len(set.union(*token_sets)) if token_sets else 1, 1)
 
-    return score_cluster(
+    score = score_cluster(
         file_overlap_density=overlap_density,
         recency_weight=recency_weight,
         path_concentration=path_concentration,
         message_similarity=message_similarity,
+        commit_count=commit_count,
     )
+    if any(commit.sha == "WORKTREE" for commit in cluster.commits) and total_commits > 1:
+        score -= 3
+    return score
 
 
 def cluster_commits(commits: list[CommitRecord]) -> list[CommitCluster]:
@@ -110,7 +121,16 @@ def cluster_commits(commits: list[CommitRecord]) -> list[CommitCluster]:
     if _clusters_are_ambiguous(ranked[0], ranked[1]):
         ranked[0].confidence = "LOW"
     else:
-        ranked[0].confidence = "HIGH" if score_gap >= 2 else "MEDIUM" if score_gap >= 0.75 else "LOW"
+        primary_commit_count = len(ranked[0].commits)
+        secondary_commit_count = len(ranked[1].commits)
+        if primary_commit_count >= 2 and primary_commit_count > secondary_commit_count:
+            ranked[0].confidence = "HIGH"
+        elif any(commit.sha == "WORKTREE" for commit in ranked[1].commits) and not any(
+            commit.sha == "WORKTREE" for commit in ranked[0].commits
+        ):
+            ranked[0].confidence = "HIGH"
+        else:
+            ranked[0].confidence = "HIGH" if score_gap >= 2 else "MEDIUM" if score_gap >= 0.75 else "LOW"
     for cluster in ranked[1:]:
         cluster.confidence = "LOW"
     return ranked

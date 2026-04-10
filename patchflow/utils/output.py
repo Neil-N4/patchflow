@@ -9,6 +9,7 @@ def render_analysis(result: ScopeAnalysisResult) -> str:
     other_block = "\n".join(f"- {path}" for path in result.other_files) or "- none"
     rec_block = "\n".join(f"- {item}" for item in result.recommendations)
     cluster_block = _render_clusters(result)
+    worktree_block = "\n".join(f"- {path}" for path in result.worktree_files) or "- none"
     branch_notes = [f"- {result.branch.behind_by} commits behind {result.branch.base_branch}"]
     if result.branch.ahead_by:
         branch_notes.append(f"- {result.branch.ahead_by} commits ahead of {result.branch.base_branch}")
@@ -31,6 +32,8 @@ def render_analysis(result: ScopeAnalysisResult) -> str:
         f"- {len(result.changed_files)} changed files detected\n\n"
         "Clusters:\n"
         f"{cluster_block}\n\n"
+        "Worktree changes:\n"
+        f"{worktree_block}\n\n"
         "Primary cluster (selected):\n"
         f"{selected_block}\n\n"
         "Other changes:\n"

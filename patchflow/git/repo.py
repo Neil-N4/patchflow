@@ -18,7 +18,7 @@ def _run_git(*args: str) -> str:
         capture_output=True,
         text=True,
     )
-    return completed.stdout.strip()
+    return completed.stdout.rstrip("\n")
 
 
 def _git_ok(*args: str) -> bool:
