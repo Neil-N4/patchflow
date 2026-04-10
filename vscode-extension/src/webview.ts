@@ -13,7 +13,9 @@ type DashboardPayload = {
   preview?: CleanPreviewResult;
   status?: StatusResult;
   cleanResult?: CleanSuccessResult | CleanErrorResult;
-  error?: string;
+  analyzeError?: string;
+  previewError?: string;
+  statusError?: string;
 };
 
 function escapeHtml(value: string): string {
@@ -53,8 +55,8 @@ function getHtml(webview: vscode.Webview, payload: DashboardPayload): string {
       : `<div class="notice error">${escapeHtml(cleanResult.error.message)}</div>`
     : "";
 
-  const errorMessage = payload.error
-    ? `<div class="notice error">${escapeHtml(payload.error)}</div>`
+  const analyzeError = payload.analyzeError
+    ? `<div class="notice error">${escapeHtml(payload.analyzeError)}</div>`
     : "";
 
   return `<!DOCTYPE html>
@@ -86,7 +88,7 @@ function getHtml(webview: vscode.Webview, payload: DashboardPayload): string {
         <button id="preview" class="secondary">Clean Preview</button>
         <button id="clean">Create Clean Branch</button>
       </div>
-      ${errorMessage}
+      ${analyzeError}
       ${cleanMessage}
       <div class="layout">
         <section class="panel">
@@ -107,7 +109,7 @@ function getHtml(webview: vscode.Webview, payload: DashboardPayload): string {
                 <h3>Other Changes</h3>
                 <ul>${renderList(analyzeResult.other_files)}</ul>
               `
-              : "<p>No analysis yet.</p>"
+              : `<p>${escapeHtml(payload.analyzeError ?? "No analysis yet.")}</p>`
           }
         </section>
         <section class="panel">
@@ -126,7 +128,7 @@ function getHtml(webview: vscode.Webview, payload: DashboardPayload): string {
                 <h3>Conflicts</h3>
                 <ul>${renderList(statusResult.conflicts)}</ul>
               `
-              : "<p>No PR status available.</p>"
+              : `<p>${escapeHtml(payload.statusError ?? "No PR status available.")}</p>`
           }
         </section>
         <section class="panel">
@@ -143,7 +145,7 @@ function getHtml(webview: vscode.Webview, payload: DashboardPayload): string {
                 <h3>Excluded Files</h3>
                 <ul>${renderList(preview.excluded_files)}</ul>
               `
-              : "<p>Run a clean preview to see selected and excluded changes.</p>"
+              : `<p>${escapeHtml(payload.previewError ?? "Run a clean preview to see selected and excluded changes.")}</p>`
           }
         </section>
       </div>
@@ -173,7 +175,9 @@ export class PatchflowPanel {
   private previewResult: CleanPreviewResult | undefined;
   private statusResult: StatusResult | undefined;
   private cleanResult: CleanSuccessResult | CleanErrorResult | undefined;
-  private errorMessage: string | undefined;
+  private analyzeError: string | undefined;
+  private previewError: string | undefined;
+  private statusError: string | undefined;
   private selectedCluster: number | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) {}
@@ -213,18 +217,35 @@ export class PatchflowPanel {
   }
 
   private async refresh(): Promise<void> {
+    const analyzeTask = analyze(this.selectedCluster);
+    const statusTask = status();
+
     try {
-      const [analyzeResult, statusResult] = await Promise.all([
-        analyze(this.selectedCluster),
-        status(),
-      ]);
-      this.analyzeResult = analyzeResult;
-      this.statusResult = statusResult;
-      this.previewResult = await cleanPreview(this.selectedCluster);
-      this.cleanResult = undefined;
-      this.errorMessage = undefined;
+      this.analyzeResult = await analyzeTask;
+      this.analyzeError = undefined;
     } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : String(error);
+      this.analyzeResult = undefined;
+      this.previewResult = undefined;
+      this.analyzeError = error instanceof Error ? error.message : String(error);
+      this.previewError = "Analyze must succeed before preview is available.";
+    }
+
+    try {
+      this.statusResult = await statusTask;
+      this.statusError = undefined;
+    } catch (error) {
+      this.statusResult = undefined;
+      this.statusError = error instanceof Error ? error.message : String(error);
+    }
+
+    if (this.analyzeResult) {
+      try {
+        this.previewResult = await cleanPreview(this.selectedCluster);
+        this.previewError = undefined;
+      } catch (error) {
+        this.previewResult = undefined;
+        this.previewError = error instanceof Error ? error.message : String(error);
+      }
     }
     this.render();
   }
@@ -232,9 +253,9 @@ export class PatchflowPanel {
   private async refreshPreview(): Promise<void> {
     try {
       this.previewResult = await cleanPreview(this.selectedCluster);
-      this.errorMessage = undefined;
+      this.previewError = undefined;
     } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : String(error);
+      this.previewError = error instanceof Error ? error.message : String(error);
     }
     this.render();
   }
@@ -242,11 +263,14 @@ export class PatchflowPanel {
   private async runClean(): Promise<void> {
     try {
       this.cleanResult = await clean(this.selectedCluster);
-      this.errorMessage = undefined;
-      await this.refresh();
+      if ("success" in this.cleanResult && this.cleanResult.success) {
+        await this.refresh();
+      } else {
+        this.previewError = this.cleanResult.error.message;
+      }
       return;
     } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : String(error);
+      this.previewError = error instanceof Error ? error.message : String(error);
     }
     this.render();
   }
@@ -260,7 +284,9 @@ export class PatchflowPanel {
       preview: this.previewResult,
       status: this.statusResult,
       cleanResult: this.cleanResult,
-      error: this.errorMessage,
+      analyzeError: this.analyzeError,
+      previewError: this.previewError,
+      statusError: this.statusError,
     });
   }
 }
