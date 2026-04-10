@@ -15,6 +15,7 @@ def run(
     cwd: Path,
     *,
     check: bool = True,
+    input_text: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     existing_pythonpath = env.get("PYTHONPATH")
@@ -31,6 +32,7 @@ def run(
         capture_output=True,
         text=True,
         env=env,
+        input=input_text,
     )
 
 
@@ -122,6 +124,40 @@ class PatchflowCliTests(unittest.TestCase):
 
         self.assertEqual(current_branch, "feature/test-clean")
         self.assertIn("Created: patchflow/clean-test", result.stdout)
+        self.assertIn("app.txt", clean_diff)
+        self.assertNotIn("notes.md", clean_diff)
+
+    def test_clean_interactively_selects_cluster_when_confidence_is_low(self) -> None:
+        repo = self.make_repo()
+        (repo / "app.txt").write_text("base\n")
+        git(repo, "add", "app.txt")
+        git(repo, "commit", "-m", "base commit")
+        git(repo, "switch", "-c", "feature/test-clean")
+        (repo / "app.txt").write_text("base\nfeature change\n")
+        git(repo, "add", "app.txt")
+        git(repo, "commit", "-m", "feat: update app")
+        (repo / "notes.md").write_text("notes\n")
+        git(repo, "add", "notes.md")
+        git(repo, "commit", "-m", "docs: add notes")
+
+        result = run(
+            [
+                "python3",
+                "-m",
+                "patchflow.cli",
+                "clean",
+                "--branch-name",
+                "patchflow/clean-interactive-test",
+            ],
+            repo,
+            input_text="2\ny\n",
+        )
+
+        current_branch = git(repo, "branch", "--show-current").stdout.strip()
+        clean_diff = git(repo, "diff", "--stat", "main..patchflow/clean-interactive-test").stdout
+
+        self.assertEqual(current_branch, "feature/test-clean")
+        self.assertIn("Created: patchflow/clean-interactive-test", result.stdout)
         self.assertIn("app.txt", clean_diff)
         self.assertNotIn("notes.md", clean_diff)
 
