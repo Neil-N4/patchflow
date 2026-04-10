@@ -46,10 +46,14 @@ export async function status(prRef?: string): Promise<StatusResult> {
 
 export async function cleanPreview(
   clusterIndex?: number,
+  branchName?: string,
 ): Promise<CleanPreviewResult> {
   const args = ["clean", "--dry-run", "--json"];
   if (clusterIndex !== undefined) {
     args.push("--cluster", String(clusterIndex));
+  }
+  if (branchName) {
+    args.push("--branch-name", branchName);
   }
   const { stdout } = await runPatchflowJson(args);
   return JSON.parse(stdout) as CleanPreviewResult;
@@ -57,10 +61,14 @@ export async function cleanPreview(
 
 export async function clean(
   clusterIndex?: number,
+  branchName?: string,
 ): Promise<CleanSuccessResult | CleanErrorResult> {
   const args = ["clean", "--yes", "--json"];
   if (clusterIndex !== undefined) {
     args.push("--cluster", String(clusterIndex));
+  }
+  if (branchName) {
+    args.push("--branch-name", branchName);
   }
   try {
     const { stdout } = await runPatchflowJson(args);

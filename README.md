@@ -132,6 +132,7 @@ The VS Code extension currently supports:
 - analyze + cluster selection
 - clean preview
 - clean branch creation
+- clean branch name override
 - PR status via auto-detect or manual PR number / URL input
 
 ## Structured Output

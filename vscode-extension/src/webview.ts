@@ -17,6 +17,7 @@ type DashboardPayload = {
   previewError?: string;
   statusError?: string;
   prRef?: string;
+  cleanBranchName?: string;
 };
 
 function escapeHtml(value: string): string {
@@ -95,6 +96,9 @@ function getHtml(webview: vscode.Webview, payload: DashboardPayload): string {
         <button id="loadPr" class="secondary">Load PR</button>
         <button id="clearPr" class="secondary">Auto-detect PR</button>
       </div>
+      <div class="toolbar">
+        <input id="cleanBranchName" type="text" value="${escapeHtml(payload.cleanBranchName ?? "")}" placeholder="Optional clean branch name override" />
+      </div>
       ${analyzeError}
       ${cleanMessage}
       <div class="layout">
@@ -160,24 +164,25 @@ function getHtml(webview: vscode.Webview, payload: DashboardPayload): string {
         const vscode = acquireVsCodeApi();
         const cluster = document.getElementById("cluster");
         const prRef = document.getElementById("prRef");
+        const cleanBranchName = document.getElementById("cleanBranchName");
         document.getElementById("refresh").addEventListener("click", () => {
-          vscode.postMessage({ type: "refresh", cluster: cluster.value ? Number(cluster.value) : undefined });
+          vscode.postMessage({ type: "refresh", cluster: cluster.value ? Number(cluster.value) : undefined, cleanBranchName: cleanBranchName.value || undefined });
         });
         document.getElementById("preview").addEventListener("click", () => {
-          vscode.postMessage({ type: "preview", cluster: cluster.value ? Number(cluster.value) : undefined });
+          vscode.postMessage({ type: "preview", cluster: cluster.value ? Number(cluster.value) : undefined, cleanBranchName: cleanBranchName.value || undefined });
         });
         document.getElementById("clean").addEventListener("click", () => {
-          vscode.postMessage({ type: "clean", cluster: cluster.value ? Number(cluster.value) : undefined });
+          vscode.postMessage({ type: "clean", cluster: cluster.value ? Number(cluster.value) : undefined, cleanBranchName: cleanBranchName.value || undefined });
         });
         cluster.addEventListener("change", () => {
-          vscode.postMessage({ type: "selectCluster", cluster: cluster.value ? Number(cluster.value) : undefined });
+          vscode.postMessage({ type: "selectCluster", cluster: cluster.value ? Number(cluster.value) : undefined, cleanBranchName: cleanBranchName.value || undefined });
         });
         document.getElementById("loadPr").addEventListener("click", () => {
-          vscode.postMessage({ type: "setPr", cluster: cluster.value ? Number(cluster.value) : undefined, prRef: prRef.value || undefined });
+          vscode.postMessage({ type: "setPr", cluster: cluster.value ? Number(cluster.value) : undefined, prRef: prRef.value || undefined, cleanBranchName: cleanBranchName.value || undefined });
         });
         document.getElementById("clearPr").addEventListener("click", () => {
           prRef.value = "";
-          vscode.postMessage({ type: "clearPr", cluster: cluster.value ? Number(cluster.value) : undefined });
+          vscode.postMessage({ type: "clearPr", cluster: cluster.value ? Number(cluster.value) : undefined, cleanBranchName: cleanBranchName.value || undefined });
         });
       </script>
     </body>
@@ -195,6 +200,7 @@ export class PatchflowPanel {
   private statusError: string | undefined;
   private selectedCluster: number | undefined;
   private prRef: string | undefined;
+  private cleanBranchName: string | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -215,8 +221,14 @@ export class PatchflowPanel {
     await this.refresh();
   }
 
-  private async handleMessage(message: { type: string; cluster?: number; prRef?: string }): Promise<void> {
+  private async handleMessage(message: {
+    type: string;
+    cluster?: number;
+    prRef?: string;
+    cleanBranchName?: string;
+  }): Promise<void> {
     this.selectedCluster = message.cluster;
+    this.cleanBranchName = message.cleanBranchName;
     if (message.type === "setPr") {
       this.prRef = message.prRef;
       await this.refresh();
@@ -266,7 +278,7 @@ export class PatchflowPanel {
 
     if (this.analyzeResult) {
       try {
-        this.previewResult = await cleanPreview(this.selectedCluster);
+        this.previewResult = await cleanPreview(this.selectedCluster, this.cleanBranchName);
         this.previewError = undefined;
       } catch (error) {
         this.previewResult = undefined;
@@ -278,7 +290,7 @@ export class PatchflowPanel {
 
   private async refreshPreview(): Promise<void> {
     try {
-      this.previewResult = await cleanPreview(this.selectedCluster);
+      this.previewResult = await cleanPreview(this.selectedCluster, this.cleanBranchName);
       this.previewError = undefined;
     } catch (error) {
       this.previewError = error instanceof Error ? error.message : String(error);
@@ -288,7 +300,7 @@ export class PatchflowPanel {
 
   private async runClean(): Promise<void> {
     try {
-      this.cleanResult = await clean(this.selectedCluster);
+      this.cleanResult = await clean(this.selectedCluster, this.cleanBranchName);
       if ("success" in this.cleanResult && this.cleanResult.success) {
         await this.refresh();
       } else {
@@ -314,6 +326,7 @@ export class PatchflowPanel {
       previewError: this.previewError,
       statusError: this.statusError,
       prRef: this.prRef,
+      cleanBranchName: this.cleanBranchName,
     });
   }
 }
