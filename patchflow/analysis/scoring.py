@@ -1,2 +1,12 @@
-def score_cluster(file_count: int, commit_count: int) -> int:
-    return file_count * 10 + commit_count
+def score_cluster(
+    file_overlap_density: float,
+    recency_weight: int,
+    path_concentration: float,
+    message_similarity: float,
+) -> float:
+    return (
+        file_overlap_density * 4
+        + recency_weight * 2
+        + path_concentration * 3
+        + message_similarity
+    )

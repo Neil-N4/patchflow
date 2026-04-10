@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 
 from patchflow.analysis.clustering import CommitCluster, cluster_commits
-from patchflow.git.commits import CommitRecord
+from patchflow.git.commits import CommitRecord, list_branch_commits
+from patchflow.git.diff import list_changed_files, list_worktree_files
 from patchflow.git.repo import BranchContext, get_branch_context
 
 
@@ -12,35 +13,51 @@ class ScopeAnalysisResult:
     confidence: str
     clusters: list[CommitCluster]
     selected_cluster: CommitCluster | None
+    changed_files: list[str]
     other_files: list[str]
     recommendations: list[str]
 
 
 def analyze_branch_scope() -> ScopeAnalysisResult:
     branch = get_branch_context()
-
-    commits = [
-        CommitRecord(
-            sha="HEAD",
-            message="working tree snapshot",
-            files=["README.md"],
+    commits = list_branch_commits(
+        base_branch=branch.base_branch,
+        current_branch=branch.current_branch,
+    )
+    worktree_files = list_worktree_files()
+    if worktree_files:
+        commits.append(
+            CommitRecord(
+                sha="WORKTREE",
+                message="uncommitted changes",
+                files=worktree_files,
+            )
         )
-    ]
+
+    changed_files = list_changed_files()
     clusters = cluster_commits(commits)
     selected_cluster = clusters[0] if clusters else None
+    selected_files = set(selected_cluster.files if selected_cluster else [])
+    other_files = [path for path in changed_files if path not in selected_files]
 
-    recommendations = ["clean branch"]
+    recommendations: list[str] = []
     if branch.behind_by > 0:
         recommendations.append("update branch")
-    else:
+    if len(clusters) > 1 or other_files or branch.has_uncommitted_changes:
+        recommendations.append("clean branch")
+    if not recommendations:
         recommendations.append("wait")
+
+    status = "DIRTY" if len(clusters) > 1 or other_files or branch.has_uncommitted_changes else "CLEAN"
+    confidence = selected_cluster.confidence if selected_cluster else "LOW"
 
     return ScopeAnalysisResult(
         branch=branch,
-        status="DIRTY",
-        confidence=selected_cluster.confidence if selected_cluster else "LOW",
+        status=status,
+        confidence=confidence,
         clusters=clusters,
         selected_cluster=selected_cluster,
-        other_files=[],
+        changed_files=changed_files,
+        other_files=other_files,
         recommendations=recommendations,
     )
