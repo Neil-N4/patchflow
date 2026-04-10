@@ -8,6 +8,7 @@ def render_analysis(result: ScopeAnalysisResult) -> str:
     selected_block = "\n".join(f"- {path}" for path in selected_files) or "- none"
     other_block = "\n".join(f"- {path}" for path in result.other_files) or "- none"
     rec_block = "\n".join(f"- {item}" for item in result.recommendations)
+    cluster_block = _render_clusters(result)
     branch_notes = [f"- {result.branch.behind_by} commits behind {result.branch.base_branch}"]
     if result.branch.ahead_by:
         branch_notes.append(f"- {result.branch.ahead_by} commits ahead of {result.branch.base_branch}")
@@ -28,6 +29,8 @@ def render_analysis(result: ScopeAnalysisResult) -> str:
         f"- {len(result.clusters)} change clusters detected\n"
         f"{scope_note}\n"
         f"- {len(result.changed_files)} changed files detected\n\n"
+        "Clusters:\n"
+        f"{cluster_block}\n\n"
         "Primary cluster (selected):\n"
         f"{selected_block}\n\n"
         "Other changes:\n"
@@ -46,10 +49,12 @@ def render_clean_preview(
     selected_commits = result.selected_cluster.commits if result.selected_cluster else []
     selected_files = result.selected_cluster.files if result.selected_cluster else []
     clean_branch_name = branch_name or default_clean_branch_name(result.branch.current_branch)
+    selected_cluster_position = result.selected_cluster_index
 
     excluded_commits = [
         commit.message
-        for cluster in result.clusters[1:]
+        for index, cluster in enumerate(result.clusters)
+        if index != selected_cluster_position
         for commit in cluster.commits
         if commit.sha != "WORKTREE"
     ]
@@ -62,6 +67,7 @@ def render_clean_preview(
 
     return (
         f"Planned branch: {clean_branch_name}\n\n"
+        f"Selected cluster: {((result.selected_cluster_index or 0) + 1) if result.selected_cluster_index is not None else 'auto'}\n\n"
         "Selected commits:\n"
         f"{commit_block}\n\n"
         "Excluded commits:\n"
@@ -72,6 +78,21 @@ def render_clean_preview(
         f"{excluded_file_block}\n\n"
         "Safe: original branch unchanged"
     )
+
+
+def _render_clusters(result: ScopeAnalysisResult) -> str:
+    if not result.clusters:
+        return "- none"
+
+    sections: list[str] = []
+    for index, cluster in enumerate(result.clusters, start=1):
+        header = f"- [{index}] {cluster.label} score={cluster.score:.2f} confidence={cluster.confidence}"
+        if result.selected_cluster_index == index - 1:
+            header += " (selected)"
+        commit_lines = [f"  commit: {commit.message}" for commit in cluster.commits]
+        file_lines = [f"  file: {path}" for path in cluster.files]
+        sections.append("\n".join([header, *commit_lines, *file_lines]))
+    return "\n".join(sections)
 
 
 def render_status(result: PRStatusResult) -> str:

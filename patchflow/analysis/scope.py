@@ -13,12 +13,30 @@ class ScopeAnalysisResult:
     confidence: str
     clusters: list[CommitCluster]
     selected_cluster: CommitCluster | None
+    selected_cluster_index: int | None
     changed_files: list[str]
     other_files: list[str]
     recommendations: list[str]
 
 
-def analyze_branch_scope() -> ScopeAnalysisResult:
+def _resolve_selected_cluster(
+    clusters: list[CommitCluster],
+    cluster_index: int | None,
+) -> tuple[int | None, CommitCluster | None]:
+    if not clusters:
+        return None, None
+
+    if cluster_index is None:
+        return 0, clusters[0]
+
+    if cluster_index < 1 or cluster_index > len(clusters):
+        raise ValueError(f"Cluster {cluster_index} is out of range.")
+
+    resolved_index = cluster_index - 1
+    return resolved_index, clusters[resolved_index]
+
+
+def analyze_branch_scope(cluster_index: int | None = None) -> ScopeAnalysisResult:
     branch = get_branch_context()
     commits = list_branch_commits(
         base_branch=branch.base_branch,
@@ -36,7 +54,10 @@ def analyze_branch_scope() -> ScopeAnalysisResult:
 
     changed_files = list_changed_files()
     clusters = cluster_commits(commits)
-    selected_cluster = clusters[0] if clusters else None
+    selected_cluster_index, selected_cluster = _resolve_selected_cluster(
+        clusters,
+        cluster_index,
+    )
     selected_files = set(selected_cluster.files if selected_cluster else [])
     other_files = [path for path in changed_files if path not in selected_files]
 
@@ -57,6 +78,7 @@ def analyze_branch_scope() -> ScopeAnalysisResult:
         confidence=confidence,
         clusters=clusters,
         selected_cluster=selected_cluster,
+        selected_cluster_index=selected_cluster_index,
         changed_files=changed_files,
         other_files=other_files,
         recommendations=recommendations,
