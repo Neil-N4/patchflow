@@ -50,6 +50,7 @@ patchflow --help
 ```bash
 patchflow analyze
 patchflow analyze --cluster 2
+patchflow analyze --json
 ```
 
 Example output:
@@ -92,10 +93,18 @@ Safety rules:
 ```bash
 patchflow status --pr 22894
 patchflow status --pr https://github.com/google-gemini/gemini-cli/pull/22894
+patchflow status --json --pr 22894
 ```
 
 If `--pr` is omitted, Patchflow tries to infer an open PR from the current
 branch on the `origin` GitHub remote.
+
+## Structured Output
+
+`analyze` and `status` both support `--json` for machine-readable output.
+
+This is the current integration surface for editor tooling, scripts, and future
+UI layers.
 
 ## Development
 

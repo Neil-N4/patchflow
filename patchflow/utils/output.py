@@ -1,6 +1,53 @@
+import json
+
 from patchflow.analysis.scope import ScopeAnalysisResult
 from patchflow.cleaning.branch_builder import default_clean_branch_name
 from patchflow.github.pr_status import PRStatusResult
+
+
+def analysis_to_dict(result: ScopeAnalysisResult) -> dict[str, object]:
+    return {
+        "branch": {
+            "current": result.branch.current_branch,
+            "base": result.branch.base_branch,
+            "ahead_by": result.branch.ahead_by,
+            "behind_by": result.branch.behind_by,
+            "has_uncommitted_changes": result.branch.has_uncommitted_changes,
+        },
+        "status": result.status,
+        "confidence": result.confidence,
+        "selected_cluster_index": (
+            result.selected_cluster_index + 1
+            if result.selected_cluster_index is not None
+            else None
+        ),
+        "changed_files": result.changed_files,
+        "worktree_files": result.worktree_files,
+        "other_files": result.other_files,
+        "recommendations": result.recommendations,
+        "clusters": [
+            {
+                "index": index,
+                "label": cluster.label,
+                "score": round(cluster.score, 4),
+                "confidence": cluster.confidence,
+                "commits": [
+                    {
+                        "sha": commit.sha,
+                        "message": commit.message,
+                        "files": commit.files,
+                    }
+                    for commit in cluster.commits
+                ],
+                "files": cluster.files,
+            }
+            for index, cluster in enumerate(result.clusters, start=1)
+        ],
+    }
+
+
+def render_analysis_json(result: ScopeAnalysisResult) -> str:
+    return json.dumps(analysis_to_dict(result), indent=2, sort_keys=True)
 
 
 def render_analysis(result: ScopeAnalysisResult) -> str:
@@ -116,3 +163,18 @@ def render_status(result: PRStatusResult) -> str:
         f"{conflicts}\n\n"
         f"Recommendation:\n-> {result.recommendation}"
     )
+
+
+def status_to_dict(result: PRStatusResult) -> dict[str, object]:
+    return {
+        "status": result.status,
+        "checks": result.checks,
+        "reviews": result.reviews,
+        "branch": result.branch,
+        "conflicts": result.conflicts,
+        "recommendation": result.recommendation,
+    }
+
+
+def render_status_json(result: PRStatusResult) -> str:
+    return json.dumps(status_to_dict(result), indent=2, sort_keys=True)
