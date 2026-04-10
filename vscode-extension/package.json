@@ -20,7 +20,17 @@
         "command": "patchflow.open",
         "title": "Patchflow: Open Dashboard"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Patchflow",
+      "properties": {
+        "patchflow.cliPath": {
+          "type": "string",
+          "default": "patchflow",
+          "description": "Path to the Patchflow CLI executable used by the VS Code extension."
+        }
+      }
+    }
   },
   "scripts": {
     "build": "tsc -p ./",

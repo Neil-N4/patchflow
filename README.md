@@ -135,6 +135,9 @@ The VS Code extension currently supports:
 - clean branch name override
 - PR status via auto-detect or manual PR number / URL input
 
+If the extension cannot find the CLI, set `Patchflow > Cli Path` in VS Code
+settings to point at the executable you want it to run.
+
 ## Structured Output
 
 `analyze`, `clean`, and `status` all support `--json` for machine-readable output.

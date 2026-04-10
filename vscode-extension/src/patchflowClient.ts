@@ -8,6 +8,7 @@ import type {
   CleanSuccessResult,
   StatusResult,
 } from "./types";
+import { formatPatchflowInvocationError } from "./clientErrors";
 import {
   buildAnalyzeArgs,
   buildCleanArgs,
@@ -25,11 +26,21 @@ function getWorkspaceFolder(): string {
   return folder.uri.fsPath;
 }
 
+function getCliPath(): string {
+  return vscode.workspace
+    .getConfiguration("patchflow")
+    .get<string>("cliPath", "patchflow");
+}
+
 async function runPatchflowJson(
   args: string[],
 ): Promise<{ stdout: string; stderr: string }> {
   const cwd = getWorkspaceFolder();
-  return execFileAsync("patchflow", args, { cwd });
+  try {
+    return await execFileAsync(getCliPath(), args, { cwd });
+  } catch (error) {
+    throw new Error(formatPatchflowInvocationError(error));
+  }
 }
 
 export async function analyze(clusterIndex?: number): Promise<AnalyzeResult> {
@@ -72,6 +83,6 @@ export async function clean(
         parseCleanError((error as { stderr: string }).stderr),
       ) as CleanErrorResult;
     }
-    throw error;
+    throw new Error(formatPatchflowInvocationError(error));
   }
 }
