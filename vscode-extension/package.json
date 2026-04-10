@@ -1,0 +1,34 @@
+{
+  "name": "patchflow-vscode",
+  "displayName": "Patchflow",
+  "description": "VS Code integration for Patchflow branch analysis, clean previews, and PR status.",
+  "version": "0.0.1",
+  "publisher": "neil-n4",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:patchflow.open"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "patchflow.open",
+        "title": "Patchflow: Open Dashboard"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "tsc -p ./",
+    "watch": "tsc -w -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/vscode": "^1.95.0",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,266 @@
+import * as vscode from "vscode";
+import { analyze, clean, cleanPreview, status } from "./patchflowClient";
+import type {
+  AnalyzeResult,
+  CleanErrorResult,
+  CleanPreviewResult,
+  CleanSuccessResult,
+  StatusResult,
+} from "./types";
+
+type DashboardPayload = {
+  analyze?: AnalyzeResult;
+  preview?: CleanPreviewResult;
+  status?: StatusResult;
+  cleanResult?: CleanSuccessResult | CleanErrorResult;
+  error?: string;
+};
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderList(items: string[]): string {
+  if (!items.length) {
+    return "<li>none</li>";
+  }
+  return items.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+}
+
+function getHtml(webview: vscode.Webview, payload: DashboardPayload): string {
+  const analyzeResult = payload.analyze;
+  const preview = payload.preview;
+  const statusResult = payload.status;
+  const cleanResult = payload.cleanResult;
+  const clusterOptions = analyzeResult?.clusters
+    .map((cluster) => {
+      const selected =
+        analyzeResult.selected_cluster_index === cluster.index ? "selected" : "";
+      return `<option value="${cluster.index}" ${selected}>[${cluster.index}] ${escapeHtml(
+        cluster.label,
+      )} | score=${cluster.score.toFixed(2)} | ${escapeHtml(cluster.confidence)}</option>`;
+    })
+    .join("") ?? "";
+
+  const cleanMessage = cleanResult
+    ? "success" in cleanResult && cleanResult.success
+      ? `<div class="notice success">Created ${escapeHtml(cleanResult.branch_name)} from ${cleanResult.included_commits} commits.</div>`
+      : `<div class="notice error">${escapeHtml(cleanResult.error.message)}</div>`
+    : "";
+
+  const errorMessage = payload.error
+    ? `<div class="notice error">${escapeHtml(payload.error)}</div>`
+    : "";
+
+  return `<!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <style>
+        body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 16px; }
+        .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+        .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .panel { border: 1px solid var(--vscode-panel-border); border-radius: 6px; padding: 12px; }
+        h2, h3 { margin-top: 0; }
+        ul { padding-left: 18px; }
+        button, select { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; padding: 8px 12px; }
+        select { background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); }
+        button.secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+        .notice { margin: 12px 0; padding: 10px 12px; border-radius: 6px; }
+        .notice.success { background: color-mix(in srgb, var(--vscode-testing-iconPassed) 15%, transparent); }
+        .notice.error { background: color-mix(in srgb, var(--vscode-testing-iconFailed) 15%, transparent); }
+        code { font-family: var(--vscode-editor-font-family); }
+        .muted { opacity: 0.8; }
+      </style>
+    </head>
+    <body>
+      <div class="toolbar">
+        <button id="refresh">Refresh</button>
+        <select id="cluster">${clusterOptions}</select>
+        <button id="preview" class="secondary">Clean Preview</button>
+        <button id="clean">Create Clean Branch</button>
+      </div>
+      ${errorMessage}
+      ${cleanMessage}
+      <div class="layout">
+        <section class="panel">
+          <h2>Analyze</h2>
+          ${
+            analyzeResult
+              ? `
+                <p><strong>Branch:</strong> <code>${escapeHtml(analyzeResult.branch.current)}</code></p>
+                <p><strong>Base:</strong> <code>${escapeHtml(analyzeResult.branch.base)}</code></p>
+                <p><strong>Status:</strong> ${escapeHtml(analyzeResult.status)} | <strong>Confidence:</strong> ${escapeHtml(analyzeResult.confidence)}</p>
+                <p class="muted">Ahead ${analyzeResult.branch.ahead_by}, behind ${analyzeResult.branch.behind_by}${analyzeResult.branch.has_uncommitted_changes ? ", uncommitted changes present" : ""}</p>
+                <h3>Recommendations</h3>
+                <ul>${renderList(analyzeResult.recommendations)}</ul>
+                <h3>Selected Cluster Files</h3>
+                <ul>${renderList(
+                  analyzeResult.clusters.find((cluster) => cluster.index === analyzeResult.selected_cluster_index)?.files ?? [],
+                )}</ul>
+                <h3>Other Changes</h3>
+                <ul>${renderList(analyzeResult.other_files)}</ul>
+              `
+              : "<p>No analysis yet.</p>"
+          }
+        </section>
+        <section class="panel">
+          <h2>PR Status</h2>
+          ${
+            statusResult
+              ? `
+                <p><strong>Status:</strong> ${escapeHtml(statusResult.status)}</p>
+                <p><strong>Recommendation:</strong> ${escapeHtml(statusResult.recommendation)}</p>
+                <h3>Checks</h3>
+                <ul>${renderList(statusResult.checks)}</ul>
+                <h3>Reviews</h3>
+                <ul>${renderList(statusResult.reviews)}</ul>
+                <h3>Branch</h3>
+                <ul>${renderList(statusResult.branch)}</ul>
+                <h3>Conflicts</h3>
+                <ul>${renderList(statusResult.conflicts)}</ul>
+              `
+              : "<p>No PR status available.</p>"
+          }
+        </section>
+        <section class="panel">
+          <h2>Clean Preview</h2>
+          ${
+            preview
+              ? `
+                <p><strong>Branch:</strong> <code>${escapeHtml(preview.branch_name)}</code></p>
+                <p><strong>Selected cluster:</strong> ${preview.selected_cluster_index ?? "none"}</p>
+                <h3>Selected Commits</h3>
+                <ul>${renderList(preview.selected_commits.map((commit) => commit.message))}</ul>
+                <h3>Selected Files</h3>
+                <ul>${renderList(preview.selected_files)}</ul>
+                <h3>Excluded Files</h3>
+                <ul>${renderList(preview.excluded_files)}</ul>
+              `
+              : "<p>Run a clean preview to see selected and excluded changes.</p>"
+          }
+        </section>
+      </div>
+      <script>
+        const vscode = acquireVsCodeApi();
+        const cluster = document.getElementById("cluster");
+        document.getElementById("refresh").addEventListener("click", () => {
+          vscode.postMessage({ type: "refresh", cluster: cluster.value ? Number(cluster.value) : undefined });
+        });
+        document.getElementById("preview").addEventListener("click", () => {
+          vscode.postMessage({ type: "preview", cluster: cluster.value ? Number(cluster.value) : undefined });
+        });
+        document.getElementById("clean").addEventListener("click", () => {
+          vscode.postMessage({ type: "clean", cluster: cluster.value ? Number(cluster.value) : undefined });
+        });
+        cluster.addEventListener("change", () => {
+          vscode.postMessage({ type: "selectCluster", cluster: cluster.value ? Number(cluster.value) : undefined });
+        });
+      </script>
+    </body>
+  </html>`;
+}
+
+export class PatchflowPanel {
+  private panel: vscode.WebviewPanel | undefined;
+  private analyzeResult: AnalyzeResult | undefined;
+  private previewResult: CleanPreviewResult | undefined;
+  private statusResult: StatusResult | undefined;
+  private cleanResult: CleanSuccessResult | CleanErrorResult | undefined;
+  private errorMessage: string | undefined;
+  private selectedCluster: number | undefined;
+
+  constructor(private readonly context: vscode.ExtensionContext) {}
+
+  public async open(): Promise<void> {
+    if (!this.panel) {
+      this.panel = vscode.window.createWebviewPanel(
+        "patchflowDashboard",
+        "Patchflow",
+        vscode.ViewColumn.Beside,
+        { enableScripts: true },
+      );
+      this.panel.onDidDispose(() => {
+        this.panel = undefined;
+      });
+      this.panel.webview.onDidReceiveMessage((message) => void this.handleMessage(message));
+    }
+    this.panel.reveal();
+    await this.refresh();
+  }
+
+  private async handleMessage(message: { type: string; cluster?: number }): Promise<void> {
+    this.selectedCluster = message.cluster;
+    if (message.type === "selectCluster") {
+      await this.refresh();
+      return;
+    }
+    if (message.type === "preview") {
+      await this.refreshPreview();
+      return;
+    }
+    if (message.type === "clean") {
+      await this.runClean();
+      return;
+    }
+    await this.refresh();
+  }
+
+  private async refresh(): Promise<void> {
+    try {
+      const [analyzeResult, statusResult] = await Promise.all([
+        analyze(this.selectedCluster),
+        status(),
+      ]);
+      this.analyzeResult = analyzeResult;
+      this.statusResult = statusResult;
+      this.previewResult = await cleanPreview(this.selectedCluster);
+      this.cleanResult = undefined;
+      this.errorMessage = undefined;
+    } catch (error) {
+      this.errorMessage = error instanceof Error ? error.message : String(error);
+    }
+    this.render();
+  }
+
+  private async refreshPreview(): Promise<void> {
+    try {
+      this.previewResult = await cleanPreview(this.selectedCluster);
+      this.errorMessage = undefined;
+    } catch (error) {
+      this.errorMessage = error instanceof Error ? error.message : String(error);
+    }
+    this.render();
+  }
+
+  private async runClean(): Promise<void> {
+    try {
+      this.cleanResult = await clean(this.selectedCluster);
+      this.errorMessage = undefined;
+      await this.refresh();
+      return;
+    } catch (error) {
+      this.errorMessage = error instanceof Error ? error.message : String(error);
+    }
+    this.render();
+  }
+
+  private render(): void {
+    if (!this.panel) {
+      return;
+    }
+    this.panel.webview.html = getHtml(this.panel.webview, {
+      analyze: this.analyzeResult,
+      preview: this.previewResult,
+      status: this.statusResult,
+      cleanResult: this.cleanResult,
+      error: this.errorMessage,
+    });
+  }
+}

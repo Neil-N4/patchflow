@@ -20,6 +20,10 @@ Patchflow currently exposes three commands:
   Launch a minimal interactive terminal UI for analyzing clusters and creating a
   clean branch.
 
+Patchflow also includes a minimal VS Code extension in
+[`vscode-extension/`](/Users/neilnair/Documents/Playground/patchflow/vscode-extension)
+that consumes the CLI's JSON interface.
+
 ## What Works Today
 
 - Real git-backed branch analysis
@@ -28,6 +32,8 @@ Patchflow currently exposes three commands:
 - Live GitHub PR status for public repos or repos accessible via
   `GITHUB_TOKEN` / `GH_TOKEN`
 - Minimal Textual-based terminal UI for analyze + clean preview
+- Minimal VS Code webview extension powered by `analyze --json`, `clean --json`,
+  and `status --json`
 - Black-box CLI tests over disposable git repos
 
 ## What It Does Not Do Yet
@@ -134,6 +140,14 @@ Run tests:
 
 ```bash
 python3 -m unittest discover -s tests -v
+```
+
+Build the VS Code extension:
+
+```bash
+cd vscode-extension
+npm install
+npm run build
 ```
 
 ## Repository Layout
