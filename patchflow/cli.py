@@ -2,6 +2,7 @@ import click
 
 from patchflow.commands.analyze import analyze_command
 from patchflow.commands.clean import clean_command
+from patchflow.commands.doctor import doctor_command
 from patchflow.commands.status import status_command
 from patchflow.commands.tui import tui_command
 
@@ -13,6 +14,7 @@ def main() -> None:
 
 main.add_command(analyze_command)
 main.add_command(clean_command)
+main.add_command(doctor_command)
 main.add_command(status_command)
 main.add_command(tui_command)
 

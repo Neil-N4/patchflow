@@ -16,6 +16,8 @@ Patchflow currently exposes three commands:
   original branch.
 - `patchflow status`
   Fetch live GitHub PR status and summarize simple blockers.
+- `patchflow doctor`
+  Inspect whether Patchflow can run cleanly in the current environment and repo.
 - `patchflow tui`
   Launch a minimal interactive terminal UI for analyzing clusters and creating a
   clean branch.
@@ -109,6 +111,20 @@ patchflow status --json --pr 22894
 
 If `--pr` is omitted, Patchflow tries to infer an open PR from the current
 branch on the `origin` GitHub remote.
+
+### Run environment diagnostics
+
+```bash
+patchflow doctor
+patchflow doctor --json
+```
+
+This reports:
+
+- whether `git` is available
+- whether the current directory is a git worktree
+- current branch/base context when available
+- whether GitHub auth is likely available for private-repo status checks
 
 ### Launch the terminal UI
 
