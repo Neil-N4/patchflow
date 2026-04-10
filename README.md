@@ -177,7 +177,11 @@ cd vscode-extension
 npm install
 npm run build
 npm test
+npm run package:vsix
 ```
+
+This produces `vscode-extension/patchflow.vsix`, which can be installed in VS
+Code via `Extensions: Install from VSIX...`.
 
 ## Repository Layout
 

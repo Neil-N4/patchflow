@@ -4,6 +4,10 @@
   "description": "VS Code integration for Patchflow branch analysis, clean previews, and PR status.",
   "version": "0.0.1",
   "publisher": "neil-n4",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Neil-N4/patchflow.git"
+  },
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -35,9 +39,11 @@
   "scripts": {
     "build": "tsc -p ./",
     "watch": "tsc -w -p ./",
-    "test": "npm run build && node --test test/*.test.js"
+    "test": "npm run build && node --test test/*.test.js",
+    "package:vsix": "npm run build && npx @vscode/vsce package --out patchflow.vsix"
   },
   "devDependencies": {
+    "@vscode/vsce": "^3.6.1",
     "@types/node": "^22.10.1",
     "@types/vscode": "^1.95.0",
     "typescript": "^5.7.2"
