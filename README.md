@@ -156,6 +156,7 @@ Build the VS Code extension:
 cd vscode-extension
 npm install
 npm run build
+npm test
 ```
 
 ## Repository Layout

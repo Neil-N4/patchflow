@@ -8,6 +8,12 @@ import type {
   CleanSuccessResult,
   StatusResult,
 } from "./types";
+import {
+  buildAnalyzeArgs,
+  buildCleanArgs,
+  buildStatusArgs,
+  parseCleanError,
+} from "./commandArgs";
 
 const execFileAsync = promisify(execFile);
 
@@ -27,20 +33,12 @@ async function runPatchflowJson(
 }
 
 export async function analyze(clusterIndex?: number): Promise<AnalyzeResult> {
-  const args = ["analyze", "--json"];
-  if (clusterIndex !== undefined) {
-    args.push("--cluster", String(clusterIndex));
-  }
-  const { stdout } = await runPatchflowJson(args);
+  const { stdout } = await runPatchflowJson(buildAnalyzeArgs(clusterIndex));
   return JSON.parse(stdout) as AnalyzeResult;
 }
 
 export async function status(prRef?: string): Promise<StatusResult> {
-  const args = ["status", "--json"];
-  if (prRef) {
-    args.push("--pr", prRef);
-  }
-  const { stdout } = await runPatchflowJson(args);
+  const { stdout } = await runPatchflowJson(buildStatusArgs(prRef));
   return JSON.parse(stdout) as StatusResult;
 }
 
@@ -48,14 +46,9 @@ export async function cleanPreview(
   clusterIndex?: number,
   branchName?: string,
 ): Promise<CleanPreviewResult> {
-  const args = ["clean", "--dry-run", "--json"];
-  if (clusterIndex !== undefined) {
-    args.push("--cluster", String(clusterIndex));
-  }
-  if (branchName) {
-    args.push("--branch-name", branchName);
-  }
-  const { stdout } = await runPatchflowJson(args);
+  const { stdout } = await runPatchflowJson(
+    buildCleanArgs({ clusterIndex, branchName, dryRun: true }),
+  );
   return JSON.parse(stdout) as CleanPreviewResult;
 }
 
@@ -63,15 +56,10 @@ export async function clean(
   clusterIndex?: number,
   branchName?: string,
 ): Promise<CleanSuccessResult | CleanErrorResult> {
-  const args = ["clean", "--yes", "--json"];
-  if (clusterIndex !== undefined) {
-    args.push("--cluster", String(clusterIndex));
-  }
-  if (branchName) {
-    args.push("--branch-name", branchName);
-  }
   try {
-    const { stdout } = await runPatchflowJson(args);
+    const { stdout } = await runPatchflowJson(
+      buildCleanArgs({ clusterIndex, branchName }),
+    );
     return JSON.parse(stdout) as CleanSuccessResult;
   } catch (error) {
     if (
@@ -80,10 +68,9 @@ export async function clean(
       "stderr" in error &&
       typeof (error as { stderr?: string }).stderr === "string"
     ) {
-      const stderr = (error as { stderr: string }).stderr;
-      const prefix = "Error: ";
-      const raw = stderr.startsWith(prefix) ? stderr.slice(prefix.length) : stderr;
-      return JSON.parse(raw) as CleanErrorResult;
+      return JSON.parse(
+        parseCleanError((error as { stderr: string }).stderr),
+      ) as CleanErrorResult;
     }
     throw error;
   }
