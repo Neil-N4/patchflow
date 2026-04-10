@@ -48,6 +48,12 @@ def _clean_exception(message: str, *, code: str, json_output: bool) -> click.Cli
 @click.command(name="clean")
 @click.option("--yes", is_flag=True, help="Skip confirmation prompt.")
 @click.option("--dry-run", is_flag=True, help="Show the clean plan without creating a branch.")
+@click.option(
+    "--switch",
+    "switch_to_clean",
+    is_flag=True,
+    help="Leave the working tree on the clean branch after creation.",
+)
 @click.option("--branch-name", type=str, default=None, help="Override the generated clean branch name.")
 @click.option(
     "--cluster",
@@ -60,6 +66,7 @@ def _clean_exception(message: str, *, code: str, json_output: bool) -> click.Cli
 def clean_command(
     yes: bool,
     dry_run: bool,
+    switch_to_clean: bool,
     branch_name: str | None,
     cluster_index: int | None,
     json_output: bool,
@@ -74,11 +81,12 @@ def clean_command(
     if resolved_cluster_index != cluster_index:
         result = analyze_branch_scope(cluster_index=resolved_cluster_index)
 
-    click.echo(
-        render_clean_preview_json(result, branch_name)
-        if json_output
-        else render_clean_preview(result, branch_name)
-    )
+    if dry_run or not json_output:
+        click.echo(
+            render_clean_preview_json(result, branch_name)
+            if json_output
+            else render_clean_preview(result, branch_name)
+        )
 
     if dry_run:
         return
@@ -87,7 +95,11 @@ def clean_command(
         raise click.Abort()
 
     try:
-        summary = create_clean_branch(result, branch_name=branch_name)
+        summary = create_clean_branch(
+            result,
+            branch_name=branch_name,
+            switch=switch_to_clean,
+        )
     except CleanBranchError as exc:
         message = str(exc)
         code = (

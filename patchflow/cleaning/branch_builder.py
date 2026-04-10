@@ -8,6 +8,7 @@ from patchflow.analysis.scope import ScopeAnalysisResult
 class CleanBranchSummary:
     branch_name: str
     original_branch: str
+    current_branch: str
     included_commits: int
     included_files: int
 
@@ -45,18 +46,25 @@ def default_clean_branch_name(current_branch: str) -> str:
 
 
 def render_clean_summary(summary: CleanBranchSummary) -> str:
+    branch_note = (
+        f"Current branch: {summary.current_branch}"
+        if summary.current_branch == summary.branch_name
+        else "Safe: original branch unchanged"
+    )
     return (
         f"Created: {summary.branch_name}\n\n"
         "Included:\n"
         f"- {summary.included_commits} commits\n"
         f"- {summary.included_files} files\n\n"
-        "Safe: original branch unchanged"
+        f"{branch_note}"
     )
 
 
 def create_clean_branch(
     result: ScopeAnalysisResult,
     branch_name: str | None = None,
+    *,
+    switch: bool = False,
 ) -> CleanBranchSummary:
     if result.selected_cluster is None:
         raise CleanBranchError("No selected cluster is available to clean.")
@@ -93,10 +101,15 @@ def create_clean_branch(
         stderr = exc.stderr.strip() if exc.stderr else "unknown git error"
         raise CleanBranchError(f"Failed to create clean branch: {stderr}") from exc
 
-    _run_git("switch", original_branch)
+    current_branch = clean_branch_name
+    if not switch:
+        _run_git("switch", original_branch)
+        current_branch = original_branch
+
     return CleanBranchSummary(
         branch_name=clean_branch_name,
         original_branch=original_branch,
+        current_branch=current_branch,
         included_commits=len(commit_shas),
         included_files=len(result.selected_cluster.files),
     )

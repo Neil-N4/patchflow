@@ -91,6 +91,7 @@ Clusters:
 ```bash
 patchflow clean --dry-run
 patchflow clean --cluster 2 --branch-name patchflow/clean-feature --yes
+patchflow clean --cluster 2 --branch-name patchflow/clean-feature --switch --yes
 patchflow clean --dry-run --json
 ```
 
@@ -98,6 +99,7 @@ Safety rules:
 
 - Patchflow never rewrites the original branch.
 - Patchflow creates a new branch from the detected base branch.
+- Patchflow only switches to the clean branch when you explicitly pass `--switch`.
 - Patchflow refuses low-confidence cleans unless you pass `--cluster`.
 - Patchflow refuses uncommitted-only clean operations in V1.
 

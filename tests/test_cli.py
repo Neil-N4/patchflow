@@ -161,6 +161,40 @@ class PatchflowCliTests(unittest.TestCase):
         self.assertIn("app.txt", clean_diff)
         self.assertNotIn("notes.md", clean_diff)
 
+    def test_clean_switches_to_clean_branch_when_requested(self) -> None:
+        repo = self.make_repo()
+        (repo / "app.txt").write_text("base\n")
+        git(repo, "add", "app.txt")
+        git(repo, "commit", "-m", "base commit")
+        git(repo, "switch", "-c", "feature/test-switch")
+        (repo / "app.txt").write_text("base\nfeature change\n")
+        git(repo, "add", "app.txt")
+        git(repo, "commit", "-m", "feat: update app")
+        (repo / "notes.md").write_text("notes\n")
+        git(repo, "add", "notes.md")
+        git(repo, "commit", "-m", "docs: add notes")
+
+        result = run(
+            [
+                "python3",
+                "-m",
+                "patchflow.cli",
+                "clean",
+                "--cluster",
+                "2",
+                "--branch-name",
+                "patchflow/clean-switch-test",
+                "--switch",
+                "--yes",
+            ],
+            repo,
+        )
+
+        current_branch = git(repo, "branch", "--show-current").stdout.strip()
+
+        self.assertEqual(current_branch, "patchflow/clean-switch-test")
+        self.assertIn("Current branch: patchflow/clean-switch-test", result.stdout)
+
     def test_analyze_prefers_stacked_feature_commits_over_single_noise_commit(self) -> None:
         repo = self.make_repo()
         (repo / "src").mkdir()

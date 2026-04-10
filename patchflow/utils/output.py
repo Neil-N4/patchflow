@@ -237,6 +237,7 @@ def clean_summary_to_dict(summary: CleanBranchSummary) -> dict[str, object]:
         "success": True,
         "branch_name": summary.branch_name,
         "original_branch": summary.original_branch,
+        "current_branch": summary.current_branch,
         "included_commits": summary.included_commits,
         "included_files": summary.included_files,
         "safe": True,

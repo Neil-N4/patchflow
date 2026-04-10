@@ -96,6 +96,31 @@ class JsonOutputTests(unittest.TestCase):
         self.assertEqual(payload["selected_commits"][0]["message"], "feat: update app")
         self.assertTrue(payload["safe"])
 
+    def test_clean_json_success_includes_current_branch(self) -> None:
+        repo = self.make_repo()
+        (repo / "app.txt").write_text("base\n")
+        os.system(f"cd {repo} && git add app.txt && git commit -m 'base commit' >/dev/null 2>&1")
+        os.system(f"cd {repo} && git switch -c feature/json-clean-success >/dev/null 2>&1")
+        (repo / "app.txt").write_text("base\nfeature\n")
+        os.system(f"cd {repo} && git add app.txt && git commit -m 'feat: update app' >/dev/null 2>&1")
+
+        cwd = Path.cwd()
+        try:
+            os.chdir(repo)
+            result = self.runner.invoke(
+                clean_command,
+                ["--yes", "--json"],
+            )
+        finally:
+            os.chdir(cwd)
+
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.output)
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["branch_name"], "patchflow/clean-feature-json-clean-success")
+        self.assertEqual(payload["original_branch"], "feature/json-clean-success")
+        self.assertEqual(payload["current_branch"], "feature/json-clean-success")
+
     def test_clean_json_low_confidence_error_shape(self) -> None:
         repo = self.make_repo()
         (repo / "app.txt").write_text("base\n")
