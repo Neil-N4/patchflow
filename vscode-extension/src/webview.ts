@@ -24,6 +24,7 @@ export class PatchflowPanel {
   private selectedCluster: number | undefined;
   private prRef: string | undefined;
   private cleanBranchName: string | undefined;
+  private switchToClean = false;
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -49,9 +50,11 @@ export class PatchflowPanel {
     cluster?: number;
     prRef?: string;
     cleanBranchName?: string;
+    switchToClean?: boolean;
   }): Promise<void> {
     this.selectedCluster = message.cluster;
     this.cleanBranchName = message.cleanBranchName;
+    this.switchToClean = message.switchToClean ?? this.switchToClean;
     if (message.type === "setPr") {
       this.prRef = message.prRef;
       await this.refresh();
@@ -132,7 +135,11 @@ export class PatchflowPanel {
 
   private async runClean(): Promise<void> {
     try {
-      this.cleanResult = await clean(this.selectedCluster, this.cleanBranchName);
+      this.cleanResult = await clean(
+        this.selectedCluster,
+        this.cleanBranchName,
+        this.switchToClean,
+      );
       if ("success" in this.cleanResult && this.cleanResult.success) {
         await this.refresh();
       } else {
@@ -161,6 +168,7 @@ export class PatchflowPanel {
       doctorError: this.doctorError,
       prRef: this.prRef,
       cleanBranchName: this.cleanBranchName,
+      switchToClean: this.switchToClean,
     });
   }
 }

@@ -73,10 +73,11 @@ export async function cleanPreview(
 export async function clean(
   clusterIndex?: number,
   branchName?: string,
+  switchToClean?: boolean,
 ): Promise<CleanSuccessResult | CleanErrorResult> {
   try {
     const { stdout } = await runPatchflowJson(
-      buildCleanArgs({ clusterIndex, branchName }),
+      buildCleanArgs({ clusterIndex, branchName, switchToClean }),
     );
     return JSON.parse(stdout) as CleanSuccessResult;
   } catch (error) {

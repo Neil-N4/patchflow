@@ -151,6 +151,7 @@ The VS Code extension currently supports:
 - clean preview
 - clean branch creation
 - clean branch name override
+- optional switch-to-clean behavior after branch creation
 - PR status via auto-detect or manual PR number / URL input
 - local environment diagnostics via `patchflow doctor`
 

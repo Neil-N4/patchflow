@@ -7,6 +7,7 @@ test("renderDashboardHtml escapes user-provided values and marks the selected cl
   const html = renderDashboardHtml({
     prRef: '42"><script>alert(1)</script>',
     cleanBranchName: "patchflow/clean-demo",
+    switchToClean: true,
     analyze: {
       branch: {
         current: "feature/demo",
@@ -83,6 +84,8 @@ test("renderDashboardHtml escapes user-provided values and marks the selected cl
   assert.ok(!html.includes("<script>alert(1)</script>"));
   assert.ok(html.includes("Created patchflow/clean-demo from 1 commits.") === false);
   assert.ok(html.includes("[WARN] github_auth: No token detected"));
+  assert.ok(html.includes("Switch to clean branch"));
+  assert.ok(html.includes("checked"));
 });
 
 test("renderDashboardHtml shows clean success messages", () => {
@@ -91,11 +94,12 @@ test("renderDashboardHtml shows clean success messages", () => {
       success: true,
       branch_name: "patchflow/clean-fix",
       original_branch: "feature/fix",
+      current_branch: "patchflow/clean-fix",
       included_commits: 2,
       included_files: 3,
       safe: true,
     },
   });
 
-  assert.ok(html.includes("Created patchflow/clean-fix from 2 commits."));
+  assert.ok(html.includes("Created patchflow/clean-fix from 2 commits. Current branch: patchflow/clean-fix."));
 });

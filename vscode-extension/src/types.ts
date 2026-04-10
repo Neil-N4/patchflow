@@ -80,6 +80,7 @@ export type CleanSuccessResult = {
   success: true;
   branch_name: string;
   original_branch: string;
+  current_branch: string;
   included_commits: number;
   included_files: number;
   safe: boolean;

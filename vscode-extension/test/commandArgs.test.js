@@ -34,6 +34,14 @@ test("buildCleanArgs handles dry-run and branch overrides", () => {
     "--branch-name",
     "patchflow/clean-test",
   ]);
+  assert.deepEqual(buildCleanArgs({ clusterIndex: 2, switchToClean: true }), [
+    "clean",
+    "--yes",
+    "--json",
+    "--cluster",
+    "2",
+    "--switch",
+  ]);
 });
 
 test("parseCleanError strips the CLI error prefix", () => {

@@ -22,6 +22,7 @@ export function buildCleanArgs(options?: {
   clusterIndex?: number;
   branchName?: string;
   dryRun?: boolean;
+  switchToClean?: boolean;
 }): string[] {
   const args = ["clean"];
   if (options?.dryRun) {
@@ -35,6 +36,9 @@ export function buildCleanArgs(options?: {
   }
   if (options?.branchName) {
     args.push("--branch-name", options.branchName);
+  }
+  if (options?.switchToClean) {
+    args.push("--switch");
   }
   return args;
 }

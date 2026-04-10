@@ -19,6 +19,7 @@ export type DashboardPayload = {
   doctorError?: string;
   prRef?: string;
   cleanBranchName?: string;
+  switchToClean?: boolean;
 };
 
 function escapeHtml(value: string): string {
@@ -54,8 +55,8 @@ export function renderDashboardHtml(payload: DashboardPayload): string {
     .join("") ?? "";
 
   const cleanMessage = cleanResult
-    ? "success" in cleanResult && cleanResult.success
-      ? `<div class="notice success">Created ${escapeHtml(cleanResult.branch_name)} from ${cleanResult.included_commits} commits.</div>`
+      ? "success" in cleanResult && cleanResult.success
+      ? `<div class="notice success">Created ${escapeHtml(cleanResult.branch_name)} from ${cleanResult.included_commits} commits. Current branch: ${escapeHtml(cleanResult.current_branch)}.</div>`
       : `<div class="notice error">${escapeHtml(cleanResult.error.message)}</div>`
     : "";
 
@@ -100,6 +101,7 @@ export function renderDashboardHtml(payload: DashboardPayload): string {
       </div>
       <div class="toolbar">
         <input id="cleanBranchName" type="text" value="${escapeHtml(payload.cleanBranchName ?? "")}" placeholder="Optional clean branch name override" />
+        <label><input id="switchToClean" type="checkbox" ${payload.switchToClean ? "checked" : ""} /> Switch to clean branch</label>
       </div>
       ${analyzeError}
       ${cleanMessage}
@@ -184,24 +186,25 @@ export function renderDashboardHtml(payload: DashboardPayload): string {
         const cluster = document.getElementById("cluster");
         const prRef = document.getElementById("prRef");
         const cleanBranchName = document.getElementById("cleanBranchName");
+        const switchToClean = document.getElementById("switchToClean");
         document.getElementById("refresh").addEventListener("click", () => {
-          vscode.postMessage({ type: "refresh", cluster: cluster.value ? Number(cluster.value) : undefined, cleanBranchName: cleanBranchName.value || undefined });
+          vscode.postMessage({ type: "refresh", cluster: cluster.value ? Number(cluster.value) : undefined, cleanBranchName: cleanBranchName.value || undefined, switchToClean: switchToClean.checked });
         });
         document.getElementById("preview").addEventListener("click", () => {
-          vscode.postMessage({ type: "preview", cluster: cluster.value ? Number(cluster.value) : undefined, cleanBranchName: cleanBranchName.value || undefined });
+          vscode.postMessage({ type: "preview", cluster: cluster.value ? Number(cluster.value) : undefined, cleanBranchName: cleanBranchName.value || undefined, switchToClean: switchToClean.checked });
         });
         document.getElementById("clean").addEventListener("click", () => {
-          vscode.postMessage({ type: "clean", cluster: cluster.value ? Number(cluster.value) : undefined, cleanBranchName: cleanBranchName.value || undefined });
+          vscode.postMessage({ type: "clean", cluster: cluster.value ? Number(cluster.value) : undefined, cleanBranchName: cleanBranchName.value || undefined, switchToClean: switchToClean.checked });
         });
         cluster.addEventListener("change", () => {
-          vscode.postMessage({ type: "selectCluster", cluster: cluster.value ? Number(cluster.value) : undefined, cleanBranchName: cleanBranchName.value || undefined });
+          vscode.postMessage({ type: "selectCluster", cluster: cluster.value ? Number(cluster.value) : undefined, cleanBranchName: cleanBranchName.value || undefined, switchToClean: switchToClean.checked });
         });
         document.getElementById("loadPr").addEventListener("click", () => {
-          vscode.postMessage({ type: "setPr", cluster: cluster.value ? Number(cluster.value) : undefined, prRef: prRef.value || undefined, cleanBranchName: cleanBranchName.value || undefined });
+          vscode.postMessage({ type: "setPr", cluster: cluster.value ? Number(cluster.value) : undefined, prRef: prRef.value || undefined, cleanBranchName: cleanBranchName.value || undefined, switchToClean: switchToClean.checked });
         });
         document.getElementById("clearPr").addEventListener("click", () => {
           prRef.value = "";
-          vscode.postMessage({ type: "clearPr", cluster: cluster.value ? Number(cluster.value) : undefined, cleanBranchName: cleanBranchName.value || undefined });
+          vscode.postMessage({ type: "clearPr", cluster: cluster.value ? Number(cluster.value) : undefined, cleanBranchName: cleanBranchName.value || undefined, switchToClean: switchToClean.checked });
         });
       </script>
     </body>
