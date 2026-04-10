@@ -16,6 +16,9 @@ Patchflow currently exposes three commands:
   original branch.
 - `patchflow status`
   Fetch live GitHub PR status and summarize simple blockers.
+- `patchflow tui`
+  Launch a minimal interactive terminal UI for analyzing clusters and creating a
+  clean branch.
 
 ## What Works Today
 
@@ -24,6 +27,7 @@ Patchflow currently exposes three commands:
 - Safe clean-branch creation from committed changes
 - Live GitHub PR status for public repos or repos accessible via
   `GITHUB_TOKEN` / `GH_TOKEN`
+- Minimal Textual-based terminal UI for analyze + clean preview
 - Black-box CLI tests over disposable git repos
 
 ## What It Does Not Do Yet
@@ -99,6 +103,21 @@ patchflow status --json --pr 22894
 
 If `--pr` is omitted, Patchflow tries to infer an open PR from the current
 branch on the `origin` GitHub remote.
+
+### Launch the terminal UI
+
+```bash
+patchflow tui
+patchflow tui --branch-name patchflow/clean-demo
+```
+
+The current TUI supports:
+
+- branch summary
+- cluster list with selection
+- clean preview pane
+- refresh
+- clean branch creation
 
 ## Structured Output
 

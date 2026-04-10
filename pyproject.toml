@@ -11,6 +11,7 @@ requires-python = ">=3.10"
 authors = [{ name = "Neil Nair" }]
 dependencies = [
   "click>=8.1,<9",
+  "textual>=0.61,<0.70",
 ]
 
 [project.scripts]
