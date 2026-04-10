@@ -4,8 +4,14 @@ from patchflow.analysis.clustering import CommitCluster
 from patchflow.analysis.scope import ScopeAnalysisResult
 from patchflow.cleaning.branch_builder import default_clean_branch_name
 from patchflow.git.commits import CommitRecord
+from patchflow.github.pr_status import PRStatusResult
 from patchflow.git.repo import BranchContext
-from patchflow.tui.presenter import branch_summary_text, cluster_label, detail_text
+from patchflow.tui.presenter import (
+    branch_summary_text,
+    cluster_label,
+    detail_text,
+    pr_status_text,
+)
 
 
 def _result() -> ScopeAnalysisResult:
@@ -53,6 +59,26 @@ class TuiPresenterTests(unittest.TestCase):
         text = detail_text(result, None)
         self.assertIn(default_clean_branch_name(result.branch.current_branch), text)
         self.assertIn("Selected commits:", text)
+
+    def test_pr_status_text_renders_sections(self) -> None:
+        text = pr_status_text(
+            PRStatusResult(
+                status="WAITING",
+                checks=["combined status: pending"],
+                reviews=["requested teams: core"],
+                branch=["behind base by 0 commits"],
+                conflicts=["none"],
+                recommendation="wait",
+            )
+        )
+        self.assertIn("PR Status: WAITING", text)
+        self.assertIn("Checks:", text)
+        self.assertIn("requested teams: core", text)
+
+    def test_pr_status_text_renders_error(self) -> None:
+        text = pr_status_text(None, error="No open pull request found")
+        self.assertIn("PR status unavailable", text)
+        self.assertIn("No open pull request found", text)
 
 
 if __name__ == "__main__":

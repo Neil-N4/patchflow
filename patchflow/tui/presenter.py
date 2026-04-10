@@ -1,5 +1,6 @@
 from patchflow.analysis.scope import ScopeAnalysisResult
 from patchflow.cleaning.branch_builder import default_clean_branch_name
+from patchflow.github.pr_status import PRStatusResult
 from patchflow.utils.output import render_clean_preview
 
 
@@ -33,4 +34,29 @@ def detail_text(result: ScopeAnalysisResult, branch_name: str | None) -> str:
     return (
         f"Planned clean branch: {clean_branch_name}\n\n"
         f"{render_clean_preview(result, branch_name)}"
+    )
+
+
+def pr_status_text(result: PRStatusResult | None, error: str | None = None) -> str:
+    if error:
+        return f"PR status unavailable\n\n{error}"
+    if result is None:
+        return "PR status not loaded yet."
+
+    checks = "\n".join(f"- {item}" for item in result.checks) or "- none"
+    reviews = "\n".join(f"- {item}" for item in result.reviews) or "- none"
+    branch = "\n".join(f"- {item}" for item in result.branch) or "- none"
+    conflicts = "\n".join(f"- {item}" for item in result.conflicts) or "- none"
+
+    return (
+        f"PR Status: {result.status}\n"
+        f"Recommendation: {result.recommendation}\n\n"
+        "Checks:\n"
+        f"{checks}\n\n"
+        "Reviews:\n"
+        f"{reviews}\n\n"
+        "Branch:\n"
+        f"{branch}\n\n"
+        "Conflicts:\n"
+        f"{conflicts}"
     )

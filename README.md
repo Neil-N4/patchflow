@@ -116,7 +116,9 @@ The current TUI supports:
 - branch summary
 - cluster list with selection
 - clean preview pane
+- PR status pane
 - refresh
+- PR status refresh
 - clean branch creation
 
 ## Structured Output

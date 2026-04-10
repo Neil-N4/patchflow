@@ -6,7 +6,13 @@ from textual.widgets import Button, Footer, Header, ListItem, ListView, Static
 
 from patchflow.analysis.scope import ScopeAnalysisResult, analyze_branch_scope
 from patchflow.cleaning.branch_builder import CleanBranchError, create_clean_branch
-from patchflow.tui.presenter import branch_summary_text, cluster_label, detail_text
+from patchflow.github.pr_status import PRStatusError, PRStatusResult, get_pr_status
+from patchflow.tui.presenter import (
+    branch_summary_text,
+    cluster_label,
+    detail_text,
+    pr_status_text,
+)
 
 
 class PatchflowApp(App[None]):
@@ -30,6 +36,13 @@ class PatchflowApp(App[None]):
       height: auto;
     }
 
+    #pr-status {
+      margin-top: 1;
+      border: round $success;
+      padding: 1;
+      height: 1fr;
+    }
+
     #cluster-list {
       height: 1fr;
       border: round $accent;
@@ -47,13 +60,20 @@ class PatchflowApp(App[None]):
     }
     """
 
-    BINDINGS = [("q", "quit", "Quit"), ("r", "refresh", "Refresh"), ("c", "clean", "Clean")]
+    BINDINGS = [
+        ("q", "quit", "Quit"),
+        ("r", "refresh", "Refresh"),
+        ("c", "clean", "Clean"),
+        ("p", "refresh_pr_status", "Refresh PR"),
+    ]
 
     def __init__(self, branch_name: str | None = None) -> None:
         super().__init__()
         self.branch_name = branch_name
         self.result: ScopeAnalysisResult | None = None
         self.selected_cluster_index: int | None = None
+        self.pr_status: PRStatusResult | None = None
+        self.pr_status_error: str | None = None
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -63,15 +83,18 @@ class PatchflowApp(App[None]):
                 yield ListView(id="cluster-list")
             with Vertical(id="right-pane"):
                 yield Static("No cluster selected.", id="details")
+                yield Static("PR status not loaded yet.", id="pr-status")
                 yield Static("", id="status-line")
         with Horizontal(id="actions"):
             yield Button("Refresh", id="refresh")
+            yield Button("Refresh PR", id="pr-refresh")
             yield Button("Clean", id="clean")
             yield Button("Quit", id="quit")
         yield Footer()
 
     def on_mount(self) -> None:
         self.refresh_analysis()
+        self.refresh_pr_status()
 
     def refresh_analysis(self, cluster_index: int | None = None) -> None:
         self.result = analyze_branch_scope(cluster_index=cluster_index)
@@ -82,6 +105,9 @@ class PatchflowApp(App[None]):
         assert self.result is not None
         self.query_one("#summary", Static).update(branch_summary_text(self.result))
         self.query_one("#details", Static).update(detail_text(self.result, self.branch_name))
+        self.query_one("#pr-status", Static).update(
+            pr_status_text(self.pr_status, self.pr_status_error)
+        )
         list_view = self.query_one("#cluster-list", ListView)
         list_view.clear()
         for index, _cluster in enumerate(self.result.clusters):
@@ -103,15 +129,36 @@ class PatchflowApp(App[None]):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "refresh":
             self.refresh_analysis(cluster_index=self.selected_cluster_index + 1 if self.selected_cluster_index is not None else None)
+            self.refresh_pr_status()
             return
         if event.button.id == "clean":
             self.action_clean()
+            return
+        if event.button.id == "pr-refresh":
+            self.action_refresh_pr_status()
             return
         if event.button.id == "quit":
             self.exit()
 
     def action_refresh(self) -> None:
         self.refresh_analysis(cluster_index=self.selected_cluster_index + 1 if self.selected_cluster_index is not None else None)
+        self.refresh_pr_status()
+
+    def refresh_pr_status(self) -> None:
+        try:
+            self.pr_status = get_pr_status(pr_ref=None)
+            self.pr_status_error = None
+        except PRStatusError as exc:
+            self.pr_status = None
+            self.pr_status_error = str(exc)
+        if self.is_mounted:
+            self.query_one("#pr-status", Static).update(
+                pr_status_text(self.pr_status, self.pr_status_error)
+            )
+
+    def action_refresh_pr_status(self) -> None:
+        self.refresh_pr_status()
+        self._set_status("PR status refreshed.")
 
     def action_clean(self) -> None:
         if self.result is None or self.result.selected_cluster is None:
@@ -126,6 +173,7 @@ class PatchflowApp(App[None]):
             f"Created {summary.branch_name} from {summary.included_commits} commits / {summary.included_files} files."
         )
         self.refresh_analysis(cluster_index=self.selected_cluster_index + 1 if self.selected_cluster_index is not None else None)
+        self.refresh_pr_status()
 
 
 def run_tui(branch_name: str | None = None) -> None:
