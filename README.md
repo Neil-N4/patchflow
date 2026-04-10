@@ -127,6 +127,13 @@ The current TUI supports:
 - PR status refresh
 - clean branch creation
 
+The VS Code extension currently supports:
+
+- analyze + cluster selection
+- clean preview
+- clean branch creation
+- PR status via auto-detect or manual PR number / URL input
+
 ## Structured Output
 
 `analyze`, `clean`, and `status` all support `--json` for machine-readable output.

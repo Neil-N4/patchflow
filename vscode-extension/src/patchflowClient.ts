@@ -35,8 +35,12 @@ export async function analyze(clusterIndex?: number): Promise<AnalyzeResult> {
   return JSON.parse(stdout) as AnalyzeResult;
 }
 
-export async function status(): Promise<StatusResult> {
-  const { stdout } = await runPatchflowJson(["status", "--json"]);
+export async function status(prRef?: string): Promise<StatusResult> {
+  const args = ["status", "--json"];
+  if (prRef) {
+    args.push("--pr", prRef);
+  }
+  const { stdout } = await runPatchflowJson(args);
   return JSON.parse(stdout) as StatusResult;
 }
 

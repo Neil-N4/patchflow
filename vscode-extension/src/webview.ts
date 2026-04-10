@@ -16,6 +16,7 @@ type DashboardPayload = {
   analyzeError?: string;
   previewError?: string;
   statusError?: string;
+  prRef?: string;
 };
 
 function escapeHtml(value: string): string {
@@ -72,6 +73,7 @@ function getHtml(webview: vscode.Webview, payload: DashboardPayload): string {
         h2, h3 { margin-top: 0; }
         ul { padding-left: 18px; }
         button, select { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 4px; padding: 8px 12px; }
+        input { background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); border-radius: 4px; padding: 8px 12px; min-width: 320px; }
         select { background: var(--vscode-dropdown-background); border: 1px solid var(--vscode-dropdown-border); }
         button.secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
         .notice { margin: 12px 0; padding: 10px 12px; border-radius: 6px; }
@@ -87,6 +89,11 @@ function getHtml(webview: vscode.Webview, payload: DashboardPayload): string {
         <select id="cluster">${clusterOptions}</select>
         <button id="preview" class="secondary">Clean Preview</button>
         <button id="clean">Create Clean Branch</button>
+      </div>
+      <div class="toolbar">
+        <input id="prRef" type="text" value="${escapeHtml(payload.prRef ?? "")}" placeholder="PR number or GitHub pull request URL" />
+        <button id="loadPr" class="secondary">Load PR</button>
+        <button id="clearPr" class="secondary">Auto-detect PR</button>
       </div>
       ${analyzeError}
       ${cleanMessage}
@@ -152,6 +159,7 @@ function getHtml(webview: vscode.Webview, payload: DashboardPayload): string {
       <script>
         const vscode = acquireVsCodeApi();
         const cluster = document.getElementById("cluster");
+        const prRef = document.getElementById("prRef");
         document.getElementById("refresh").addEventListener("click", () => {
           vscode.postMessage({ type: "refresh", cluster: cluster.value ? Number(cluster.value) : undefined });
         });
@@ -163,6 +171,13 @@ function getHtml(webview: vscode.Webview, payload: DashboardPayload): string {
         });
         cluster.addEventListener("change", () => {
           vscode.postMessage({ type: "selectCluster", cluster: cluster.value ? Number(cluster.value) : undefined });
+        });
+        document.getElementById("loadPr").addEventListener("click", () => {
+          vscode.postMessage({ type: "setPr", cluster: cluster.value ? Number(cluster.value) : undefined, prRef: prRef.value || undefined });
+        });
+        document.getElementById("clearPr").addEventListener("click", () => {
+          prRef.value = "";
+          vscode.postMessage({ type: "clearPr", cluster: cluster.value ? Number(cluster.value) : undefined });
         });
       </script>
     </body>
@@ -179,6 +194,7 @@ export class PatchflowPanel {
   private previewError: string | undefined;
   private statusError: string | undefined;
   private selectedCluster: number | undefined;
+  private prRef: string | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -199,8 +215,18 @@ export class PatchflowPanel {
     await this.refresh();
   }
 
-  private async handleMessage(message: { type: string; cluster?: number }): Promise<void> {
+  private async handleMessage(message: { type: string; cluster?: number; prRef?: string }): Promise<void> {
     this.selectedCluster = message.cluster;
+    if (message.type === "setPr") {
+      this.prRef = message.prRef;
+      await this.refresh();
+      return;
+    }
+    if (message.type === "clearPr") {
+      this.prRef = undefined;
+      await this.refresh();
+      return;
+    }
     if (message.type === "selectCluster") {
       await this.refresh();
       return;
@@ -218,7 +244,7 @@ export class PatchflowPanel {
 
   private async refresh(): Promise<void> {
     const analyzeTask = analyze(this.selectedCluster);
-    const statusTask = status();
+    const statusTask = status(this.prRef);
 
     try {
       this.analyzeResult = await analyzeTask;
@@ -287,6 +313,7 @@ export class PatchflowPanel {
       analyzeError: this.analyzeError,
       previewError: this.previewError,
       statusError: this.statusError,
+      prRef: this.prRef,
     });
   }
 }
