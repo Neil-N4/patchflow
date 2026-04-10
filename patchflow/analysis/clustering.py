@@ -32,6 +32,18 @@ def _related_to_cluster(commit: CommitRecord, cluster: CommitCluster) -> bool:
     return bool(commit_roots & cluster_roots)
 
 
+def _clusters_are_ambiguous(primary: CommitCluster, secondary: CommitCluster) -> bool:
+    if len(primary.commits) == 1 and len(secondary.commits) == 1:
+        return True
+
+    primary_files = set(primary.files)
+    secondary_files = set(secondary.files)
+    if not (primary_files & secondary_files) and abs(primary.score - secondary.score) < 2.5:
+        return True
+
+    return False
+
+
 def _cluster_score(
     cluster: CommitCluster,
     total_commits: int,
@@ -95,7 +107,10 @@ def cluster_commits(commits: list[CommitRecord]) -> list[CommitCluster]:
         return ranked
 
     score_gap = ranked[0].score - ranked[1].score
-    ranked[0].confidence = "HIGH" if score_gap >= 2 else "MEDIUM" if score_gap >= 0.75 else "LOW"
+    if _clusters_are_ambiguous(ranked[0], ranked[1]):
+        ranked[0].confidence = "LOW"
+    else:
+        ranked[0].confidence = "HIGH" if score_gap >= 2 else "MEDIUM" if score_gap >= 0.75 else "LOW"
     for cluster in ranked[1:]:
         cluster.confidence = "LOW"
     return ranked

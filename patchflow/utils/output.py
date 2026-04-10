@@ -1,4 +1,5 @@
 from patchflow.analysis.scope import ScopeAnalysisResult
+from patchflow.cleaning.branch_builder import default_clean_branch_name
 from patchflow.github.pr_status import PRStatusResult
 
 
@@ -44,17 +45,31 @@ def render_clean_preview(
 ) -> str:
     selected_commits = result.selected_cluster.commits if result.selected_cluster else []
     selected_files = result.selected_cluster.files if result.selected_cluster else []
-    clean_branch_name = branch_name or f"patchflow/clean-{result.branch.current_branch}"
+    clean_branch_name = branch_name or default_clean_branch_name(result.branch.current_branch)
+
+    excluded_commits = [
+        commit.message
+        for cluster in result.clusters[1:]
+        for commit in cluster.commits
+        if commit.sha != "WORKTREE"
+    ]
+    excluded_files = [path for path in result.other_files]
 
     commit_block = "\n".join(f"- {commit.message}" for commit in selected_commits) or "- none"
     file_block = "\n".join(f"- {path}" for path in selected_files) or "- none"
+    excluded_commit_block = "\n".join(f"- {message}" for message in excluded_commits) or "- none"
+    excluded_file_block = "\n".join(f"- {path}" for path in excluded_files) or "- none"
 
     return (
         f"Planned branch: {clean_branch_name}\n\n"
         "Selected commits:\n"
         f"{commit_block}\n\n"
+        "Excluded commits:\n"
+        f"{excluded_commit_block}\n\n"
         "Selected files:\n"
         f"{file_block}\n\n"
+        "Excluded files:\n"
+        f"{excluded_file_block}\n\n"
         "Safe: original branch unchanged"
     )
 
