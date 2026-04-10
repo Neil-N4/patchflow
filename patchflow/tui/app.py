@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Button, Footer, Header, ListItem, ListView, Static
+from textual.widgets import Button, Footer, Header, Input, ListItem, ListView, Static
 
 from patchflow.analysis.scope import ScopeAnalysisResult, analyze_branch_scope
 from patchflow.cleaning.branch_builder import CleanBranchError, create_clean_branch
@@ -75,6 +75,7 @@ class PatchflowApp(App[None]):
         self.selected_cluster_index: int | None = None
         self.pr_status: PRStatusResult | None = None
         self.pr_status_error: str | None = None
+        self.pr_ref: str | None = None
         self.switch_to_clean = False
 
     def compose(self) -> ComposeResult:
@@ -90,6 +91,9 @@ class PatchflowApp(App[None]):
         with Horizontal(id="actions"):
             yield Button("Refresh", id="refresh")
             yield Button("Refresh PR", id="pr-refresh")
+            yield Input(placeholder="PR number or URL", id="pr-ref")
+            yield Button("Load PR", id="load-pr")
+            yield Button("Auto PR", id="clear-pr")
             yield Button("Switch: Off", id="switch-toggle")
             yield Button("Clean", id="clean")
             yield Button("Quit", id="quit")
@@ -149,6 +153,12 @@ class PatchflowApp(App[None]):
         if event.button.id == "pr-refresh":
             self.action_refresh_pr_status()
             return
+        if event.button.id == "load-pr":
+            self.action_load_pr()
+            return
+        if event.button.id == "clear-pr":
+            self.action_clear_pr()
+            return
         if event.button.id == "quit":
             self.exit()
 
@@ -158,7 +168,7 @@ class PatchflowApp(App[None]):
 
     def refresh_pr_status(self) -> None:
         try:
-            self.pr_status = get_pr_status(pr_ref=None)
+            self.pr_status = get_pr_status(pr_ref=self.pr_ref)
             self.pr_status_error = None
         except PRStatusError as exc:
             self.pr_status = None
@@ -171,6 +181,22 @@ class PatchflowApp(App[None]):
     def action_refresh_pr_status(self) -> None:
         self.refresh_pr_status()
         self._set_status("PR status refreshed.")
+
+    def action_load_pr(self) -> None:
+        value = self.query_one("#pr-ref", Input).value.strip()
+        self.pr_ref = value or None
+        self.refresh_pr_status()
+        self._set_status(
+            f"Loaded PR reference: {self.pr_ref}."
+            if self.pr_ref
+            else "PR reference cleared; using auto-detect."
+        )
+
+    def action_clear_pr(self) -> None:
+        self.pr_ref = None
+        self.query_one("#pr-ref", Input).value = ""
+        self.refresh_pr_status()
+        self._set_status("Using auto-detect for PR status.")
 
     def action_toggle_switch(self) -> None:
         self.switch_to_clean = not self.switch_to_clean
@@ -209,10 +235,6 @@ class PatchflowApp(App[None]):
         )
         self.refresh_analysis(cluster_index=self.selected_cluster_index + 1 if self.selected_cluster_index is not None else None)
         self.refresh_pr_status()
-
-    def action_toggle_switch_binding(self) -> None:
-        self.action_toggle_switch()
-
 
 def run_tui(branch_name: str | None = None) -> None:
     PatchflowApp(branch_name=branch_name).run()

@@ -141,7 +141,7 @@ The current TUI supports:
 - cluster list with selection
 - clean preview pane
 - switch-to-clean toggle
-- PR status pane
+- PR status pane with auto-detect or manual PR ref input
 - refresh
 - PR status refresh
 - clean branch creation
